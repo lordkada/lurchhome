@@ -1,4 +1,4 @@
-.PHONY: help
+.PHONY: setup build up down restart logs logs-ha status clean backup restore install install-dev shell test lint format run
 
 # Colori per output
 RED=\033[0;31m
