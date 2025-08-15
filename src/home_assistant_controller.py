@@ -1,5 +1,5 @@
 import asyncio, logging, os, json, re, httpx
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 
 """Implementation of the MCP Protocol, version 2024-11-05
 Read more: https://modelcontextprotocol.io/specification/2024-11-05
@@ -65,18 +65,6 @@ class HomeAssistantConnector:
             'Accept': 'application/json'
         }
 
-    def __handle_sse_response(self, response_data: Dict[Any, Any]):
-        if 'id' in response_data and response_data['id'] in self._pending_requests:
-            request_id = response_data['id']
-            event = self._pending_requests[request_id]
-            self._pending_requests[request_id] = response_data['result']
-            event.set()
-
-    def __get_unique_id(self):
-        id = self._current_request_id
-        self._current_request_id += 1
-        return id
-
     async def __do_post_request(self, method: str, request_id= None, params=None):
         if not self.messages_url or not self._client:
             raise ValueError("HomeAssistantConnector not initialized!")
@@ -96,13 +84,13 @@ class HomeAssistantConnector:
         if response.status_code != 200:
             raise httpx.HTTPError(f"HTTP {response.status_code}: {response.text}")
 
-    async def __queue_request(self, method: str, params=None) -> bool:
-        await self._command_queue.put(_build_request_body(method))
-        return True
+    async def __queue_request(self, method: str, params=None):
+        await self._command_queue.put(_build_request_body(method, params=params))
 
-    async def __queue_request_and_wait_response(self, method: str, params=None, timeout: float = 30) -> Dict[str, any] | None:
+    async def __queue_request_and_wait_response(self, method: str, params=None, timeout: float = 10) -> Dict[str, any] | None:
         ev = asyncio.Event()
-        id = self.__get_unique_id()
+        id = self._current_request_id
+        self._current_request_id += 1
         self._pending_requests[id] = ev
 
         try:
@@ -111,9 +99,9 @@ class HomeAssistantConnector:
             try:
                 await asyncio.wait_for(ev.wait(), timeout=timeout)
                 return self._pending_requests[id]
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 logging.error(f"[RPC] Timeout waiting reply for the request_id {id})")
-                return None
+                raise e
             finally:
                 self._pending_requests.pop(id, None)
         finally:
@@ -167,7 +155,11 @@ class HomeAssistantConnector:
                             event_data = json.loads(data)
                             logging.debug("SSE event:", event_data)
 
-                            self.__handle_sse_response(event_data)
+                            if 'id' in event_data and event_data['id'] in self._pending_requests:
+                                request_id = event_data['id']
+                                event = self._pending_requests[request_id]
+                                self._pending_requests[request_id] = event_data['result']
+                                event.set()
 
                         except json.JSONDecodeError:
                             if _is_valid_message_path(data):
@@ -197,9 +189,9 @@ class HomeAssistantConnector:
             init_response = await self.__queue_request_and_wait_response("initialize", params=init_params)
             logging.info(init_response)
             if init_response:
-                if await self.__queue_request("notifications/initialized"):
-                    self._sse_initialized.set()
-                    logging.info("SSE init complete!")
+                await self.__queue_request("notifications/initialized")
+                self._sse_initialized.set()
+                logging.info("SSE init complete!")
 
             await asyncio.gather(sse_task, cmd_task)
 
