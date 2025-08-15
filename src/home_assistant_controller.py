@@ -43,14 +43,14 @@ def _build_request_body(method: str, params=None, request_id=None):
 
 class HomeAssistantConnector:
     def __init__(self):
-        self.session_id = None
         self.base_url = os.getenv('HA_BASE_URL', "")
         self.api_token = os.getenv("HA_API_TOKEN", "")
         self.messages_url = None
 
         # Sync & inter-thread communication
         self._messages_url_ready = asyncio.Event()
-        self._pending_requests: Dict[int, asyncio.Event] = {}
+        self._sse_initialized = asyncio.Event()
+        self._pending_requests: Dict[int, asyncio.Event | Dict[str, any]] = {}
         self._current_request_id = 1
         self._client: Optional[httpx.AsyncClient] = None
         self._command_queue = asyncio.Queue()
@@ -68,7 +68,9 @@ class HomeAssistantConnector:
     def __handle_sse_response(self, response_data: Dict[Any, Any]):
         if 'id' in response_data and response_data['id'] in self._pending_requests:
             request_id = response_data['id']
-            self._pending_requests[request_id].set()
+            event = self._pending_requests[request_id]
+            self._pending_requests[request_id] = response_data['result']
+            event.set()
 
     def __get_unique_id(self):
         id = self._current_request_id
@@ -81,6 +83,9 @@ class HomeAssistantConnector:
 
         payload = _create_jsonrpc_payload(method, params=params, id=request_id)
         url = f'{self.base_url}{self.messages_url}'
+
+        logging.debug(f'__do_post_request: {url}')
+        logging.debug(payload)
 
         response = await self._client.post(
             url,
@@ -95,7 +100,7 @@ class HomeAssistantConnector:
         await self._command_queue.put(_build_request_body(method))
         return True
 
-    async def __queue_request_and_wait_response(self, method: str, params=None, timeout: float = 30) -> bool:
+    async def __queue_request_and_wait_response(self, method: str, params=None, timeout: float = 30) -> Dict[str, any] | None:
         ev = asyncio.Event()
         id = self.__get_unique_id()
         self._pending_requests[id] = ev
@@ -105,15 +110,16 @@ class HomeAssistantConnector:
 
             try:
                 await asyncio.wait_for(ev.wait(), timeout=timeout)
-                return True
+                return self._pending_requests[id]
             except asyncio.TimeoutError:
                 logging.error(f"[RPC] Timeout waiting reply for the request_id {id})")
-                return False
+                return None
             finally:
                 self._pending_requests.pop(id, None)
         finally:
             if id in self._pending_requests:
                 del self._pending_requests[id]
+            logging.info(self._pending_requests)
 
     async def __command_processor(self):
         await self._messages_url_ready.wait()
@@ -133,7 +139,7 @@ class HomeAssistantConnector:
                 self._command_queue.task_done()
 
             except Exception as e:
-                print(f"Errore nel command processor: {e}")
+                logging.error(f"Errore nel command processor: {e}")
                 await asyncio.sleep(1)
 
     async def __sse_listener(self):
@@ -159,7 +165,7 @@ class HomeAssistantConnector:
 
                         try:
                             event_data = json.loads(data)
-                            logging.debug("SSE event:", json.dumps(event_data, indent=2))
+                            logging.debug("SSE event:", event_data)
 
                             self.__handle_sse_response(event_data)
 
@@ -168,6 +174,9 @@ class HomeAssistantConnector:
                                 self.__set_messages_url(data)
                             else:
                                 logging.error(f"Not JSON data received: '{data}'")
+
+                        except Exception as e:
+                            logging.error(e)
 
     async def connect_and_run(self):
         sse_task = asyncio.create_task(self.__sse_listener(), name="sse_listener")
@@ -185,8 +194,11 @@ class HomeAssistantConnector:
                     "version": "1.0.0"
                 }
             }
-            if await self.__queue_request_and_wait_response("initialize", params=init_params):
+            init_response = await self.__queue_request_and_wait_response("initialize", params=init_params)
+            logging.info(init_response)
+            if init_response:
                 if await self.__queue_request("notifications/initialized"):
+                    self._sse_initialized.set()
                     logging.info("SSE init complete!")
 
             await asyncio.gather(sse_task, cmd_task)
@@ -200,3 +212,7 @@ class HomeAssistantConnector:
                 await asyncio.gather(sse_task, cmd_task, return_exceptions=True)
             except:
                 pass
+
+    async def get_tools(self) -> Dict[str, any]:
+        await self._sse_initialized.wait()
+        return await self.__queue_request_and_wait_response("tools/list")
