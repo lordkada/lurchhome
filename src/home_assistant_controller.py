@@ -7,17 +7,20 @@ Read more: https://modelcontextprotocol.io/specification/2024-11-05
 """
 MCP_PROTOCOL_VERSION = "2024-11-05"
 
-def _create_jsonrpc_payload(method: str, params=None, id= None) -> str:
-    payload = {
-        "jsonrpc": "2.0",
-        "method": method,
+
+def _create_jsonrpc_payload(method: str, params:Dict=None, rpc_id=None) -> str:
+    payload:Dict[str, any] = {
+        "jsonrpc": "2.0"
     }
+
+    if method:
+        payload['method'] = method
 
     if params:
         payload["params"] = params
 
-    if id:
-        payload["id"] = id
+    if rpc_id:
+        payload["id"] = rpc_id
 
     return json.dumps(payload)
 
@@ -63,11 +66,11 @@ class HomeAssistantConnector:
         self.messages_url = messages_url
         self._messages_url_ready.set()
 
-    async def __do_post_request(self, method: str, request_id= None, params=None):
+    async def __do_post_request(self, method: str, request_id=None, params=None):
         if not self.messages_url or not self._client:
             raise ValueError("HomeAssistantConnector not initialized!")
 
-        payload = _create_jsonrpc_payload(method, params=params, id=request_id)
+        payload = _create_jsonrpc_payload(method, params=params, rpc_id=request_id)
         url = f'{self.base_url}{self.messages_url}'
 
         logging.debug(f'__do_post_request: {url}')
@@ -85,7 +88,7 @@ class HomeAssistantConnector:
     async def __queue_request(self, method: str, params=None):
         await self._command_queue.put(_build_request_body(method, params=params))
 
-    async def __queue_request_and_wait_response(self, method: str, params=None, timeout: float = 10) -> Dict[str, any] | None:
+    async def __queue_request_and_wait_response(self, method: str, params=None, timeout: float = 10) -> Dict[str, any]:
         ev = asyncio.Event()
         id = self._current_request_id
         self._current_request_id += 1
@@ -115,8 +118,8 @@ class HomeAssistantConnector:
                 if command['action'] == 'send_request':
                     await self.__do_post_request(
                         command['method'],
-                        request_id= command.get('request_id'),
-                        params= command.get('params')
+                        request_id=command.get('request_id'),
+                        params=command.get('params')
                     )
                 elif command['action'] == 'shutdown':
                     break
@@ -124,7 +127,7 @@ class HomeAssistantConnector:
                 self._command_queue.task_done()
 
             except Exception as e:
-                logging.error(f"Errore nel command processor: {e}")
+                logging.error(f"Command processor error: {e}")
                 await asyncio.sleep(1)
 
     async def __sse_listener(self):
@@ -183,7 +186,7 @@ class HomeAssistantConnector:
                         "version": "1.0.0"
                     }
                 }
-                init_response = await self.__queue_request_and_wait_response("initialize", params=init_params)
+                init_response:Dict = await self.__queue_request_and_wait_response("initialize", params=init_params)
                 logging.info(init_response)
                 if init_response:
                     await self.__queue_request("notifications/initialized")
@@ -197,10 +200,7 @@ class HomeAssistantConnector:
                 sse_task.cancel()
                 cmd_task.cancel()
 
-                try:
-                    await asyncio.gather(sse_task, cmd_task, return_exceptions=True)
-                except:
-                    pass
+                await asyncio.gather(sse_task, cmd_task, return_exceptions=True)
 
     async def get_tools(self) -> Dict[str, any]:
         await self._sse_initialized.wait()
