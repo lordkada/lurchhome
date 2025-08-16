@@ -86,10 +86,13 @@ make run           # Run main application
 
 ```text
 ├── docker/
-│   └── data/
+│   └── volumes/
 │       └── homeassistant/
 ├── src/
+│   └── integrations/
+│       └── home_assistant_connector.py
 │   └── main.py
+├── tests/
 ├── .env.example
 ├── Makefile
 ├── README.md

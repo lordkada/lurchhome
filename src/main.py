@@ -4,7 +4,7 @@ import contextlib
 import logging
 import os
 
-from home_assistant_controller import HomeAssistantConnector
+from integrations.home_assistant_connector import HomeAssistantConnector
 
 async def run():
     ha_base_url: str = os.getenv('HA_BASE_URL', "")
