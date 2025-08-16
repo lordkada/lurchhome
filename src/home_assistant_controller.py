@@ -49,6 +49,8 @@ class HomeAssistantConnector:
 
         # Sync & inter-thread communication
         self._client: httpx.AsyncClient | None = None
+        self._std_http_header = {'Authorization': f'Bearer {self.api_token}'}
+        self._std_http_post_header = dict(self._std_http_header, **{'Accept': 'application/json'})
         self.messages_url: str | None = None
         self._messages_url_ready: asyncio.Event = asyncio.Event()
         self._sse_initialized: asyncio.Event = asyncio.Event()
@@ -57,15 +59,9 @@ class HomeAssistantConnector:
         self._command_queue: asyncio.Queue = asyncio.Queue()
         self._pending_requests: Dict[int, asyncio.Event | Dict[str, any]] = {}
 
-    def __set_messages_url(self, messages_url: str):
+    def __set_messages_url(self, messages_url: str) -> None:
         self.messages_url = messages_url
         self._messages_url_ready.set()
-
-    def __get_post_headers(self):
-        return {
-            'Authorization': f'Bearer {self.api_token}',
-            'Accept': 'application/json'
-        }
 
     async def __do_post_request(self, method: str, request_id= None, params=None):
         if not self.messages_url or not self._client:
@@ -80,7 +76,7 @@ class HomeAssistantConnector:
         response = await self._client.post(
             url,
             content=payload,
-            headers=self.__get_post_headers()
+            headers=self._std_http_post_header
         )
 
         if response.status_code != 200:
@@ -132,14 +128,10 @@ class HomeAssistantConnector:
                 await asyncio.sleep(1)
 
     async def __sse_listener(self):
-
         if not self._client:
             raise ValueError("HomeAssistantConnector not initialized!")
 
-        headers = {
-            'Authorization': f'Bearer {self.api_token}',
-            'Accept': 'text/event-stream'
-        }
+        headers = dict(self._std_http_header, **{'Accept': 'text/event-stream'})
 
         async with self._client.stream('GET', f'{self.base_url}/mcp_server/sse', headers=headers) as response:
             if response.status_code != 200:
