@@ -95,7 +95,7 @@ class HomeAssistantConnector:
         self._pending_requests[id] = ev
 
         try:
-            await self._command_queue.put(_build_request_body(method, params, id))
+            await self._command_queue.put(_build_request_body(method, params=params, request_id=id))
             try:
                 await asyncio.wait_for(ev.wait(), timeout=timeout)
                 return self._pending_requests[id]
