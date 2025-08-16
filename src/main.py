@@ -2,18 +2,21 @@ import argparse
 import asyncio
 import contextlib
 import logging
+import os
 
 from home_assistant_controller import HomeAssistantConnector
 
 async def run():
-    connector = HomeAssistantConnector()
-    connector_task = asyncio.create_task(connector.connect_and_run())  # long-running
-    tools = await connector.get_tools()
+    ha_base_url: str = os.getenv('HA_BASE_URL', "")
+    ha_api_token: str = os.getenv("HA_API_TOKEN", "")
 
+    connector = HomeAssistantConnector(ha_base_url, ha_api_token)
+    connector_task = asyncio.create_task(connector.connect_and_run())  # long-running
+
+    tools = await connector.get_tools()
     print(tools)
 
     connector_task.cancel()
-
     with contextlib.suppress(asyncio.CancelledError):
         await connector_task
 

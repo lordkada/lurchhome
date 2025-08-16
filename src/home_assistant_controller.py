@@ -1,7 +1,8 @@
-import asyncio, logging, os, json, re, httpx
-from typing import Optional, Dict
+import asyncio, logging, json, re, httpx
+from typing import Dict
 
-"""Implementation of the MCP Protocol, version 2024-11-05
+"""
+Implementation of the MCP Protocol, version 2024-11-05
 Read more: https://modelcontextprotocol.io/specification/2024-11-05
 """
 MCP_PROTOCOL_VERSION = "2024-11-05"
@@ -42,18 +43,19 @@ def _build_request_body(method: str, params=None, request_id=None):
 
 
 class HomeAssistantConnector:
-    def __init__(self):
-        self.base_url = os.getenv('HA_BASE_URL', "")
-        self.api_token = os.getenv("HA_API_TOKEN", "")
-        self.messages_url = None
+    def __init__(self, ha_base_url: str, ha_api_token: str):
+        self.base_url: str = ha_base_url
+        self.api_token: str = ha_api_token
 
         # Sync & inter-thread communication
-        self._messages_url_ready = asyncio.Event()
-        self._sse_initialized = asyncio.Event()
+        self._client: httpx.AsyncClient | None = None
+        self.messages_url: str | None = None
+        self._messages_url_ready: asyncio.Event = asyncio.Event()
+        self._sse_initialized: asyncio.Event = asyncio.Event()
+
+        self._current_request_id: int = 1
+        self._command_queue: asyncio.Queue = asyncio.Queue()
         self._pending_requests: Dict[int, asyncio.Event | Dict[str, any]] = {}
-        self._current_request_id = 1
-        self._client: Optional[httpx.AsyncClient] = None
-        self._command_queue = asyncio.Queue()
 
     def __set_messages_url(self, messages_url: str):
         self.messages_url = messages_url
@@ -95,7 +97,6 @@ class HomeAssistantConnector:
 
         try:
             await self._command_queue.put(_build_request_body(method, params, id))
-
             try:
                 await asyncio.wait_for(ev.wait(), timeout=timeout)
                 return self._pending_requests[id]
@@ -131,79 +132,83 @@ class HomeAssistantConnector:
                 await asyncio.sleep(1)
 
     async def __sse_listener(self):
+
+        if not self._client:
+            raise ValueError("HomeAssistantConnector not initialized!")
+
         headers = {
             'Authorization': f'Bearer {self.api_token}',
             'Accept': 'text/event-stream'
         }
 
+        async with self._client.stream('GET', f'{self.base_url}/mcp_server/sse', headers=headers) as response:
+            if response.status_code != 200:
+                error_text = await response.aread()
+                raise httpx.HTTPError(f"HTTP {response.status_code}: {error_text.decode()}")
+
+            async for line in response.aiter_lines():
+                if line.startswith('data: '):
+                    data = line[6:].strip()
+
+                    if not data:
+                        continue
+
+                    try:
+                        event_data = json.loads(data)
+                        logging.debug("SSE event:", event_data)
+
+                        if 'id' in event_data and event_data['id'] in self._pending_requests:
+                            request_id = event_data['id']
+                            event = self._pending_requests[request_id]
+                            self._pending_requests[request_id] = event_data['result']
+                            event.set()
+
+                    except json.JSONDecodeError:
+                        if _is_valid_message_path(data):
+                            self.__set_messages_url(data)
+                        else:
+                            logging.error(f"Not JSON data received: '{data}'")
+
+                    except Exception as e:
+                        logging.error(e)
+
+    async def connect_and_run(self):
         async with httpx.AsyncClient(timeout=None) as client:
             self._client = client
 
-            async with client.stream('GET', f'{self.base_url}/mcp_server/sse', headers=headers) as response:
-                if response.status_code != 200:
-                    error_text = await response.aread()
-                    raise httpx.HTTPError(f"HTTP {response.status_code}: {error_text.decode()}")
-
-                async for line in response.aiter_lines():
-                    if line.startswith('data: '):
-                        data = line[6:].strip()
-
-                        if not data:
-                            continue
-
-                        try:
-                            event_data = json.loads(data)
-                            logging.debug("SSE event:", event_data)
-
-                            if 'id' in event_data and event_data['id'] in self._pending_requests:
-                                request_id = event_data['id']
-                                event = self._pending_requests[request_id]
-                                self._pending_requests[request_id] = event_data['result']
-                                event.set()
-
-                        except json.JSONDecodeError:
-                            if _is_valid_message_path(data):
-                                self.__set_messages_url(data)
-                            else:
-                                logging.error(f"Not JSON data received: '{data}'")
-
-                        except Exception as e:
-                            logging.error(e)
-
-    async def connect_and_run(self):
-        sse_task = asyncio.create_task(self.__sse_listener(), name="sse_listener")
-        cmd_task = asyncio.create_task(self.__command_processor(), name="command_processor")
-
-        try:
-            logging.info("Waiting the messages URL from the HA server")
-            await self._messages_url_ready.wait()
-
-            init_params = {
-                "protocolVersion": f'{MCP_PROTOCOL_VERSION}',
-                "capabilities": {},
-                "clientInfo": {
-                    "name": "LurchHome",
-                    "version": "1.0.0"
-                }
-            }
-            init_response = await self.__queue_request_and_wait_response("initialize", params=init_params)
-            logging.info(init_response)
-            if init_response:
-                await self.__queue_request("notifications/initialized")
-                self._sse_initialized.set()
-                logging.info("SSE init complete!")
-
-            await asyncio.gather(sse_task, cmd_task)
-
-        finally:
-            await self._command_queue.put({'action': 'shutdown'})
-            sse_task.cancel()
-            cmd_task.cancel()
+            sse_task = asyncio.create_task(self.__sse_listener(), name="sse_listener")
+            cmd_task = asyncio.create_task(self.__command_processor(), name="command_processor")
 
             try:
-                await asyncio.gather(sse_task, cmd_task, return_exceptions=True)
-            except:
-                pass
+                logging.info("Waiting the messages URL from the HA server")
+                await self._messages_url_ready.wait()
+
+                init_params = {
+                    "protocolVersion": f'{MCP_PROTOCOL_VERSION}',
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "LurchHome",
+                        "version": "1.0.0"
+                    }
+                }
+                init_response = await self.__queue_request_and_wait_response("initialize", params=init_params)
+                logging.info(init_response)
+                if init_response:
+                    await self.__queue_request("notifications/initialized")
+                    self._sse_initialized.set()
+                    logging.info("SSE init complete!")
+
+                await asyncio.gather(sse_task, cmd_task)
+
+            finally:
+                await self._command_queue.put({'action': 'shutdown'})
+                sse_task.cancel()
+                cmd_task.cancel()
+
+                try:
+                    await asyncio.gather(sse_task, cmd_task, return_exceptions=True)
+                except:
+                    pass
 
     async def get_tools(self) -> Dict[str, any]:
         await self._sse_initialized.wait()
