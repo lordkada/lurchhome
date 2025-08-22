@@ -18,6 +18,45 @@ This project is at a very early stage. Features, roadmap, and APIs may change ra
 
 ---
 
+## ⚡ Quickstart
+
+**Prerequisites**: Python 3.10+, pip, Docker, Docker Compose, GNU Make.
+
+### 1) Install dependencies
+
+```bash
+pip install pipenv
+pipenv install
+pipenv install --dev
+```
+
+### 2) Configure environment
+
+Create your local env file from the template and fill in the required values:
+
+```bash
+cp .env.example .env
+# then edit .env
+```
+
+> Tip: `make setup` also prepares required folders and can bootstrap the `.env` from the template.
+
+### 3) Build & run with Docker
+
+```bash
+make build-docker
+make up-docker
+# (optional) check status & logs
+make status-docker
+make logs-docker
+# stop
+make down-docker
+```
+
+> Local dev without Docker: `make run` (after creating `.env`).
+
+---
+
 ## 🚀 Project Overview
 
 This project aims to build a "smart butler" capable of:
