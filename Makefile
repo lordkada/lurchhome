@@ -1,4 +1,4 @@
-.PHONY: help
+.PHONY: setup build up down restart logs logs-ha status clean backup restore install install-dev shell test lint format run
 
 # Colori per output
 RED=\033[0;31m
@@ -12,32 +12,32 @@ setup:
 	@if [ ! -f .env ]; then cp .env.example .env; echo "$(GREEN)File .env built from template$(NC)"; fi
 	@echo "$(GREEN)Setup completed!$(NC)"
 
-build:
+build-docker:
 	@echo "$(YELLOW)Building services...$(NC)"
 	docker-compose build
 
-up:
+up-docker:
 	@echo "$(YELLOW)Starting services...$(NC)"
 	docker-compose up -d
 
-down:
+down-docker:
 	@echo "$(YELLOW)Stopping services...$(NC)"
 	docker-compose down
 
-restart:
+restart-docker:
 	@echo "$(YELLOW)Restarting services...$(NC)"
 	docker-compose restart
 
-logs:
+logs-docker:
 	docker-compose logs -f
 
-logs-ha:
+logs-docker-ha:
 	docker-compose logs -f homeassistant
 
-status:
+status-docker:
 	docker-compose ps
 
-clean:
+clean-docker:
 	@echo "$(RED)Clean up containers, images and volumes...$(NC)"
 	docker-compose down --volumes --remove-orphans
 	docker system prune -f
@@ -67,15 +67,6 @@ shell:
 
 test:
 	@if command -v pipenv > /dev/null; then pipenv run pytest tests/; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi
-
-lint:
-	@if command -v pipenv > /dev/null; then \
-		pipenv run flake8 src/ || echo "$(YELLOW)flake8 not configured$(NC)"; \
-		pipenv run black --check src/ || echo "$(YELLOW)black not configured$(NC)"; \
-	else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi
-
-format:
-	@if command -v pipenv > /dev/null; then pipenv run black src/; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenvo$(NC)"; fi
 
 run:
 	@if command -v pipenv > /dev/null; then pipenv run python src/main.py; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi

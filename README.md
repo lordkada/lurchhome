@@ -52,21 +52,21 @@ Use the Makefile to simplify common tasks. Below are the most relevant targets:
 ### Setup & Project Init
 
 ```bash
-make setup         # Create required folders and .env file from template
-make build         # Build services using docker-compose
-make up            # Start services in detached mode
-make down          # Stop all services
-make restart       # Restart all running services
-make logs          # Tail logs from all services
-make logs-ha       # Tail logs from Home Assistant only
-make status        # Show running containers
+make setup                # Create required folders and .env file from template
+make build-docker         # Build services using docker-compose
+make up-docker            # Start services in detached mode
+make down-docker          # Stop all services
+make restart-docker       # Restart all running services
+make logs-docker          # Tail logs from all services
+make logs-docker-ha       # Tail logs from Home Assistant only
+make status-docker        # Show running containers
 ```
 
 ### Maintenance
 
 ```bash
-make clean         # Stop containers and remove volumes/images
-make backup        # Create a backup archive of volumes
+make clean -docker        # Stop containers and remove volumes/images
+make backup               # Create a backup archive of volumes
 make restore BACKUP_FILE=path/to/backup.tar.gz  # Restore from a backup
 ```
 
@@ -77,8 +77,6 @@ make install       # Install Python dependencies with pipenv
 make install-dev   # Install dev dependencies
 make shell         # Open a pipenv shell
 make test          # Run tests with pytest
-make lint          # Run flake8 and black checks
-make format        # Autoformat code using black
 make run           # Run main application
 ```
 
@@ -86,10 +84,14 @@ make run           # Run main application
 
 ```text
 ├── docker/
-│   └── data/
+│   └── volumes/
 │       └── homeassistant/
 ├── src/
+│   └── integrations/
+│       └── home_assistant_connector.py
 │   └── main.py
+├── tests/
+│       └── test_home_assistant_connector.py
 ├── .env.example
 ├── Makefile
 ├── README.md
