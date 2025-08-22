@@ -109,7 +109,7 @@ class HomeAssistantConnector:
                 del self._pending_requests[id]
             logging.info(self._pending_requests)
 
-    async def __command_processor(self):
+    async def __command_processor(self, forever=True):
         await self._messages_url_ready.wait()
 
         while True:
@@ -123,6 +123,9 @@ class HomeAssistantConnector:
                     )
 
                 self._command_queue.task_done()
+
+                if not forever:
+                    break
 
             except Exception as e:
                 logging.error(f"Command processor error: {e}")
