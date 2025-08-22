@@ -49,12 +49,12 @@ class HomeAssistantConnector:
     def __init__(self, ha_base_url: str, ha_api_token: str):
         self.base_url: str = ha_base_url
         self.api_token: str = ha_api_token
+        self.messages_url: str | None = None
 
         # Sync & inter-thread communication
         self._client: httpx.AsyncClient | None = None
         self._std_http_header = {'Authorization': f'Bearer {self.api_token}'}
         self._std_http_post_header = dict(self._std_http_header, **{'Accept': 'application/json'})
-        self.messages_url: str | None = None
         self._messages_url_ready: asyncio.Event = asyncio.Event()
         self._sse_initialized: asyncio.Event = asyncio.Event()
 
@@ -121,8 +121,6 @@ class HomeAssistantConnector:
                         request_id=command.get('request_id'),
                         params=command.get('params')
                     )
-                elif command['action'] == 'shutdown':
-                    break
 
                 self._command_queue.task_done()
 
@@ -196,7 +194,6 @@ class HomeAssistantConnector:
                 await asyncio.gather(sse_task, cmd_task)
 
             finally:
-                await self._command_queue.put({'action': 'shutdown'})
                 sse_task.cancel()
                 cmd_task.cancel()
 
