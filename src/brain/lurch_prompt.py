@@ -1,9 +1,3 @@
-import logging
-
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables.utils import Output
-from langchain_ollama import ChatOllama
-
 SYSTEM_MSG = r"""
 You are **Lurch Home**, a virtual home assistant inspired by Lurch from *The Addams Family*. You are a digital butler integrated with Home Assistant. Your duties: control smart-home devices, answer requests, and assist household members with calm efficiency.
 
@@ -45,25 +39,4 @@ OUTPUT STYLE
 - Lead with the action or answer, then brief context if needed.
 - For device operations, confirm outcome or provide clear next steps.
 
-END OF SYSTEM MESSAGE.
 """
-
-prompt = ChatPromptTemplate.from_messages([
-    ("system", SYSTEM_MSG),
-    ("human", "{input}")
-])
-
-class Lurch:
-    def __init__(self, tools: dict):
-        self.chain = prompt | ChatOllama(model="qwen3:30b",
-                                         reasoning=True)
-
-        for tool in tools.get('tools'):
-            logging.info(f'{tool['name']} - {tool['description']}')
-            logging.info(f'{tool['inputSchema']}')
-            logging.info('')
-
-    async def talk_to_lurch(self, message:str="") -> Output:
-        if len(message) > 0:
-            return self.chain.invoke({"input": message})
-        return None

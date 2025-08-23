@@ -4,12 +4,12 @@ import contextlib
 import logging
 import os
 
-from integrations.home_assistant_connector import HomeAssistantConnector
-from lurch_brain import Lurch
+from integrations.ha.ha_mcp_connector import HAMCPConnector
+from brain.lurch_brain import Lurch
 
 
 async def run():
-    connector = HomeAssistantConnector(os.getenv('HA_BASE_URL', ""), os.getenv("HA_API_TOKEN", ""))
+    connector = HAMCPConnector(os.getenv('HA_BASE_URL', ""), os.getenv("HA_API_TOKEN", ""))
     connector_task = asyncio.create_task(connector.connect_and_run())  # long-running
 
     tools = await connector.get_tools()
@@ -21,8 +21,8 @@ async def run():
         if user_input == 'bye':
             break
 
-        response = await asyncio.create_task(lurch.talk_to_lurch(message=user_input))
-        print(f'> {response.content}')
+        async for step in lurch.talk_to_lurch(message=user_input):
+            print(f'> {step}')
 
     connector_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):

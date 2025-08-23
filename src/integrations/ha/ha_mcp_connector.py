@@ -45,7 +45,7 @@ def _build_request_body(method: str, params=None, request_id=None):
     return request_body
 
 
-class HomeAssistantConnector:
+class HAMCPConnector:
     def __init__(self, ha_base_url: str, ha_api_token: str):
         self.base_url: str = ha_base_url
         self.api_token: str = ha_api_token

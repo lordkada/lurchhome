@@ -5,14 +5,14 @@ import httpx
 from unittest.mock import AsyncMock, Mock, patch
 import os
 
-import integrations.home_assistant_connector as home_assistant_connector
-from integrations.home_assistant_connector import HomeAssistantConnector
+import integrations.ha.ha_mcp_connector as ha_mcp_connector
+from integrations.ha.ha_mcp_connector import HAMCPConnector
 
 class TestUtilityFunctions:
     """Test per le funzioni utility."""
 
     def test_create_jsonrpc_payload_minimal(self):
-        result = home_assistant_connector._create_jsonrpc_payload("test_method")
+        result = ha_mcp_connector._create_jsonrpc_payload("test_method")
         expected = {
             "jsonrpc": "2.0",
             "method": "test_method"
@@ -21,7 +21,7 @@ class TestUtilityFunctions:
 
     def test_create_jsonrpc_payload_with_params(self):
         params = {"key": "value", "number": 42}
-        result = home_assistant_connector._create_jsonrpc_payload("test_method", params=params)
+        result = ha_mcp_connector._create_jsonrpc_payload("test_method", params=params)
         expected = {
             "jsonrpc": "2.0",
             "method": "test_method",
@@ -30,7 +30,7 @@ class TestUtilityFunctions:
         assert json.loads(result) == expected
 
     def test_create_jsonrpc_payload_with_id(self):
-        result = home_assistant_connector._create_jsonrpc_payload("test_method", rpc_id=123)
+        result = ha_mcp_connector._create_jsonrpc_payload("test_method", rpc_id=123)
         expected = {
             "jsonrpc": "2.0",
             "method": "test_method",
@@ -40,7 +40,7 @@ class TestUtilityFunctions:
 
     def test_create_jsonrpc_payload_complete(self):
         params = {"test": True}
-        result = home_assistant_connector._create_jsonrpc_payload("test_method", params=params, rpc_id="abc123")
+        result = ha_mcp_connector._create_jsonrpc_payload("test_method", params=params, rpc_id="abc123")
         expected = {
             "jsonrpc": "2.0",
             "method": "test_method",
@@ -56,7 +56,7 @@ class TestUtilityFunctions:
             "/mcp_server/messages/A1B2C3"
         ]
         for path in valid_paths:
-            assert home_assistant_connector._is_valid_message_path(path), f"Path {path} should be valid"
+            assert ha_mcp_connector._is_valid_message_path(path), f"Path {path} should be valid"
 
     def test_is_valid_message_path_invalid(self):
         invalid_paths = [
@@ -68,10 +68,10 @@ class TestUtilityFunctions:
             "/mcp_server/messages/ABC123/extra"
         ]
         for path in invalid_paths:
-            assert not home_assistant_connector._is_valid_message_path(path), f"Path {path} shouldn't be valid"
+            assert not ha_mcp_connector._is_valid_message_path(path), f"Path {path} shouldn't be valid"
 
     def test_build_request_body_minimal(self):
-        result = home_assistant_connector._build_request_body("test_method")
+        result = ha_mcp_connector._build_request_body("test_method")
         expected = {
             'action': 'send_request',
             'method': 'test_method'
@@ -80,7 +80,7 @@ class TestUtilityFunctions:
 
     def test_build_request_body_with_params(self):
         params = {"key": "value"}
-        result = home_assistant_connector._build_request_body("test_method", params=params)
+        result = ha_mcp_connector._build_request_body("test_method", params=params)
         expected = {
             'action': 'send_request',
             'method': 'test_method',
@@ -89,7 +89,7 @@ class TestUtilityFunctions:
         assert result == expected
 
     def test_build_request_body_with_request_id(self):
-        result = home_assistant_connector._build_request_body("test_method", request_id=42)
+        result = ha_mcp_connector._build_request_body("test_method", request_id=42)
         expected = {
             'action': 'send_request',
             'method': 'test_method',
@@ -100,7 +100,7 @@ class TestUtilityFunctions:
     def test_build_request_body_complete(self):
         """Test costruzione body request completo."""
         params = {"test": True}
-        result = home_assistant_connector._build_request_body("test_method", params=params, request_id="test_id")
+        result = ha_mcp_connector._build_request_body("test_method", params=params, request_id="test_id")
         expected = {
             'action': 'send_request',
             'method': 'test_method',
@@ -112,11 +112,11 @@ class TestUtilityFunctions:
 class TestHomeAssistantConnector:
     @pytest.fixture
     def connector(self):
-        return HomeAssistantConnector('http://test.local', 'test_token')
+        return HAMCPConnector('http://test.local', 'test_token')
 
     def test_init_default_values(self):
         with patch.dict(os.environ, {}, clear=True):
-            connector = HomeAssistantConnector('http://test.local', 'test_token')
+            connector = HAMCPConnector('http://test.local', 'test_token')
             assert connector.base_url == "http://test.local"
             assert connector.api_token == "test_token"
             assert connector.messages_url is None
@@ -131,9 +131,9 @@ class TestHomeAssistantConnector:
         assert len(connector._pending_requests) == 0
 
 
-    def test_set_messages_url(self, connector: HomeAssistantConnector):
+    def test_set_messages_url(self, connector: HAMCPConnector):
         test_url = "/mcp_server/messages/TEST123"
-        connector._HomeAssistantConnector__set_messages_url(test_url)
+        connector._HAMCPConnector__set_messages_url(test_url)
         assert connector.messages_url == test_url
         assert connector._messages_url_ready.is_set()
 
@@ -141,7 +141,7 @@ class TestHomeAssistantConnector:
     @pytest.mark.asyncio
     async def test_do_post_request_not_initialized(self, connector):
         with pytest.raises(ValueError, match="HomeAssistantConnector not initialized!"):
-            await connector._HomeAssistantConnector__do_post_request("test_method")
+            await connector._HAMCPConnector__do_post_request("test_method")
 
     @pytest.mark.asyncio
     async def test_do_post_request_success(self, connector):
@@ -153,7 +153,7 @@ class TestHomeAssistantConnector:
         mock_client.post.return_value = mock_response
         connector._client = mock_client
 
-        await connector._HomeAssistantConnector__do_post_request("test_method", request_id=1, params={"test": True})
+        await connector._HAMCPConnector__do_post_request("test_method", request_id=1, params={"test": True})
 
         mock_client.post.assert_called_once()
         call_args = mock_client.post.call_args
@@ -172,11 +172,11 @@ class TestHomeAssistantConnector:
         connector._client = mock_client
 
         with pytest.raises(httpx.HTTPError, match="HTTP 404"):
-            await connector._HomeAssistantConnector__do_post_request("test_method")
+            await connector._HAMCPConnector__do_post_request("test_method")
 
     @pytest.mark.asyncio
     async def test_queue_request(self, connector):
-        await connector._HomeAssistantConnector__queue_request("test_method", params={"test": True})
+        await connector._HAMCPConnector__queue_request("test_method", params={"test": True})
 
         assert connector._command_queue.qsize() == 1
 
@@ -191,7 +191,7 @@ class TestHomeAssistantConnector:
     @pytest.mark.asyncio
     async def test_queue_request_and_wait_response_timeout(self, connector):
         with pytest.raises(asyncio.TimeoutError):
-            await connector._HomeAssistantConnector__queue_request_and_wait_response(
+            await connector._HAMCPConnector__queue_request_and_wait_response(
                 "test_method", timeout=0.1
             )
 
@@ -209,7 +209,7 @@ class TestHomeAssistantConnector:
         response_task = asyncio.create_task(mock_response())
 
         try:
-            result = await connector._HomeAssistantConnector__queue_request_and_wait_response(
+            result = await connector._HAMCPConnector__queue_request_and_wait_response(
                 "test_method", timeout=1.0
             )
             assert result == {"result": "success"}
@@ -239,7 +239,7 @@ class TestHomeAssistantConnector:
         }
         await connector._command_queue.put(command)
 
-        await connector._HomeAssistantConnector__command_processor(forever=False)
+        await connector._HAMCPConnector__command_processor(forever=False)
 
         mock_client.post.assert_called_once()
 
