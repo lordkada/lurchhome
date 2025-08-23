@@ -46,6 +46,37 @@ def _json_schema_to_type(prop_schema: Dict[str, Any], is_required: bool) -> tupl
     else:
         return python_type, ...
 
+def _create_pydantic_model(tool_name: str, json_schema: Dict[str, Any]) -> type[BaseModel]:
+
+    if not json_schema or json_schema.get('type') != 'object':
+        return BaseModel
+
+    properties = json_schema.get('properties', {})
+    required = json_schema.get('required', [])
+
+    annotations = {}
+    defaults = {}
+
+    for prop_name, prop_schema in properties.items():
+        prop_type, default_value = _json_schema_to_type(prop_schema, prop_name in required)
+        annotations[prop_name] = prop_type
+        if default_value is not ...:
+            defaults[prop_name] = default_value
+
+    model_name = f"{tool_name}Input"
+
+    def __init__(self, **kwargs):
+        for key, value in defaults.items():
+            if key not in kwargs:
+                kwargs[key] = value
+        BaseModel.__init__(self, **kwargs)
+
+    model_class = type(model_name, (BaseModel,), {
+        '__annotations__': annotations,
+        '__init__': __init__
+    })
+
+    return cast(type[BaseModel], model_class)
 
 class Lurch:
     def __init__(self, tools: dict):
@@ -66,7 +97,7 @@ class Lurch:
         tool_description = tool_data['description']
         input_schema = tool_data.get('inputSchema', {})
 
-        input_model = self._create_pydantic_model(tool_name, input_schema)
+        input_model = _create_pydantic_model(tool_name, input_schema)
 
         async def tool_function(*args, **kwargs) -> str:
             try:
@@ -103,38 +134,6 @@ class Lurch:
             coroutine=tool_function,
         )
 
-
-    def _create_pydantic_model(self, tool_name: str, json_schema: Dict[str, Any]) -> type[BaseModel]:
-
-        if not json_schema or json_schema.get('type') != 'object':
-            return BaseModel
-
-        properties = json_schema.get('properties', {})
-        required = json_schema.get('required', [])
-
-        annotations = {}
-        defaults = {}
-
-        for prop_name, prop_schema in properties.items():
-            prop_type, default_value = _json_schema_to_type(prop_schema, prop_name in required)
-            annotations[prop_name] = prop_type
-            if default_value is not ...:
-                defaults[prop_name] = default_value
-
-        model_name = f"{tool_name}Input"
-
-        def __init__(self, **kwargs):
-            for key, value in defaults.items():
-                if key not in kwargs:
-                    kwargs[key] = value
-            BaseModel.__init__(self, **kwargs)
-
-        model_class = type(model_name, (BaseModel,), {
-            '__annotations__': annotations,
-            '__init__': __init__
-        })
-
-        return cast(type[BaseModel], model_class)
 
     def talk_to_lurch(self, message:str="") -> AsyncIterator[Output]:
         if len(message) > 0:
