@@ -6,7 +6,7 @@ from langchain_core.runnables.utils import Output
 from langchain_core.tools import Tool, StructuredTool
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
-from pydantic import BaseModel
+from jsonschema_pydantic import jsonschema_to_pydantic
 
 from brain.lurch_prompt import SYSTEM_MSG
 
@@ -15,68 +15,6 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", "{input}")
 ])
 
-
-def _json_schema_to_type(prop_schema: Dict[str, Any], is_required: bool) -> tuple:
-
-    prop_type = prop_schema.get('type', 'string')
-    default_value = prop_schema.get('default')
-    enum_values = prop_schema.get('enum')
-
-    if prop_type == 'string':
-        if enum_values:
-            python_type = str
-        else:
-            python_type = str
-    elif prop_type == 'integer':
-        python_type = int
-    elif prop_type == 'number':
-        python_type = float
-    elif prop_type == 'boolean':
-        python_type = bool
-    elif prop_type == 'array':
-        python_type = List[str]
-    else:
-        python_type = Any
-
-    if not is_required:
-        if default_value is not None:
-            return Optional[python_type], default_value
-        else:
-            return Optional[python_type], None
-    else:
-        return python_type, ...
-
-def _create_pydantic_model(tool_name: str, json_schema: Dict[str, Any]) -> type[BaseModel]:
-
-    if not json_schema or json_schema.get('type') != 'object':
-        return BaseModel
-
-    properties = json_schema.get('properties', {})
-    required = json_schema.get('required', [])
-
-    annotations = {}
-    defaults = {}
-
-    for prop_name, prop_schema in properties.items():
-        prop_type, default_value = _json_schema_to_type(prop_schema, prop_name in required)
-        annotations[prop_name] = prop_type
-        if default_value is not ...:
-            defaults[prop_name] = default_value
-
-    model_name = f"{tool_name}Input"
-
-    def __init__(self, **kwargs):
-        for key, value in defaults.items():
-            if key not in kwargs:
-                kwargs[key] = value
-        BaseModel.__init__(self, **kwargs)
-
-    model_class = type(model_name, (BaseModel,), {
-        '__annotations__': annotations,
-        '__init__': __init__
-    })
-
-    return cast(type[BaseModel], model_class)
 
 class Lurch:
     def __init__(self, tools: dict):
@@ -97,7 +35,7 @@ class Lurch:
         tool_description = tool_data['description']
         input_schema = tool_data.get('inputSchema', {})
 
-        input_model = _create_pydantic_model(tool_name, input_schema)
+        input_model = jsonschema_to_pydantic(input_schema)
 
         async def tool_function(*args, **kwargs) -> str:
             try:
@@ -111,7 +49,7 @@ class Lurch:
 
                 validated_params = input_model(**kwargs)
 
-                print(f"ESEGUO {tool_name} con: {validated_params.dict()}")
+                print(f"ESEGUO {tool_name} con: {validated_params.model_dump()}")
 
                 # Chiamata MCP (ripristina la tua riga reale)
                 # result = await self.mcp_client.call_tool(
