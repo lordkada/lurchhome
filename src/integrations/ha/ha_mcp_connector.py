@@ -8,8 +8,8 @@ Read more: https://modelcontextprotocol.io/specification/2024-11-05
 MCP_PROTOCOL_VERSION = "2024-11-05"
 
 
-def _create_jsonrpc_payload(method: str, params:Dict=None, rpc_id=None) -> str:
-    payload:Dict[str, any] = {
+def _create_jsonrpc_payload(method: str, params: Dict = None, rpc_id=None) -> str:
+    payload: Dict[str, any] = {
         "jsonrpc": "2.0"
     }
 
@@ -189,7 +189,7 @@ class HAMCPConnector:
                         "version": "1.0.0"
                     }
                 }
-                init_response:Dict = await self.__queue_request_and_wait_response("initialize", params=init_params)
+                init_response: Dict = await self.__queue_request_and_wait_response("initialize", params=init_params)
                 logging.info(init_response)
                 if init_response:
                     await self.__queue_request("notifications/initialized")
@@ -207,3 +207,10 @@ class HAMCPConnector:
     async def get_tools(self) -> Dict[str, any]:
         await self._sse_initialized.wait()
         return await self.__queue_request_and_wait_response("tools/list")
+
+    async def call_tool(self, name: str, params= Dict) -> Dict[str, any]:
+        await self._sse_initialized.wait()
+        return await self.__queue_request_and_wait_response("tools/call", params={
+            'name': name,
+            'arguments': params
+        })

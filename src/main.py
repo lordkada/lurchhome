@@ -11,10 +11,9 @@ from brain.lurch_brain import Lurch
 
 
 async def run():
-    connector = HAMCPConnector(os.getenv('HA_BASE_URL', ""), os.getenv("HA_API_TOKEN", ""))
+    connector = HAMCPConnector(os.getenv('HA_BASE_URL'), os.getenv("HA_API_TOKEN"))
     connector_task = asyncio.create_task(connector.connect_and_run())  # long-running
-
-    model = ChatOllama(model="qwen3:30b", reasoning=True)
+    model = ChatOllama(model=os.getenv('LURCH_LLM_MODEL'), reasoning=True)
     lurch = await Lurch(model, connector).startup()
 
     while True:
