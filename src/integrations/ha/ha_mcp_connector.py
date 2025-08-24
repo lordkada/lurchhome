@@ -138,6 +138,8 @@ class HAMCPConnector:
         headers = dict(self._std_http_header, **{'Accept': 'text/event-stream'})
 
         async with self._client.stream('GET', f'{self.base_url}/mcp_server/sse', headers=headers) as response:
+            logging.debug("SSE event: %s", response)
+
             if response.status_code != 200:
                 error_text = await response.aread()
                 raise httpx.HTTPError(f"HTTP {response.status_code}: {error_text.decode()}")

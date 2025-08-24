@@ -1,14 +1,15 @@
-import json
-from typing import Dict, Any, List, Optional, AsyncIterator, cast
+import logging
+from typing import Optional, AsyncIterator, Self, cast
 
+from langchain_core.language_models import chat_models
+from langchain_core.messages import messages_from_dict, BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables.utils import Output
-from langchain_core.tools import Tool, StructuredTool
-from langchain_ollama import ChatOllama
+from langchain_core.runnables import Runnable
 from langgraph.prebuilt import create_react_agent
-from jsonschema_pydantic import jsonschema_to_pydantic
 
 from brain.lurch_prompt import SYSTEM_MSG
+from integrations.ha.ha_mcp_connector import HAMCPConnector
+from integrations.ha.ha_utils import build_tools
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", SYSTEM_MSG),
@@ -17,64 +18,32 @@ prompt = ChatPromptTemplate.from_messages([
 
 
 class Lurch:
-    def __init__(self, tools: dict):
-        model = ChatOllama(model="qwen3:30b", reasoning=True)
-        converted_tools = self.convert_tools(tools)
-        self.chain = prompt | create_react_agent(model, converted_tools)
 
-    def convert_tools(self, mcp_tools_response: Dict[str, Any]) -> List[Tool]:
-        langchain_tools = []
-        for tool_data in mcp_tools_response.get('tools', []):
-            langchain_tool = self._create_langchain_tool(tool_data)
-            langchain_tools.append(langchain_tool)
+    def __init__(self, model: chat_models, ha_mcp_connector: HAMCPConnector):
+        if model is None:
+            raise TypeError("model can't be None")
+        self.model = model
 
-        return langchain_tools
+        if ha_mcp_connector is None:
+            raise TypeError("ha_mcp_connector can't be None")
+        self.ha_mcp_connector = ha_mcp_connector
 
-    def _create_langchain_tool(self, tool_data: Dict[str, Any]) -> StructuredTool:
-        tool_name = tool_data['name']
-        tool_description = tool_data['description']
-        input_schema = tool_data.get('inputSchema', {})
+        self.chain = Optional[Runnable]
 
-        input_model = jsonschema_to_pydantic(input_schema)
+    async def startup(self) -> Self:
+        self.chain = prompt | create_react_agent(self.model, await build_tools(self.ha_mcp_connector))
+        return self
 
-        async def tool_function(*args, **kwargs) -> str:
-            try:
-                if args:
-                    if len(args) == 1 and isinstance(args[0], dict):
-                        kwargs = {**args[0], **kwargs}
-                    else:
-                        raise TypeError(
-                            f"{tool_name} ha ricevuto argomenti posizionali inattesi: {args}"
-                        )
+    async def talk_to_lurch(self, message:str="") -> AsyncIterator[BaseMessage]:
+        async for step in self.chain.astream({"input": message}, stream_mode="values"):
 
-                validated_params = input_model(**kwargs)
+            logging.debug("chain step: %s", step)
 
-                print(f"ESEGUO {tool_name} con: {validated_params.model_dump()}")
+            msgs = step.get('agent', {}).get('messages') or []
+            if not msgs:
+                continue
 
-                # Chiamata MCP (ripristina la tua riga reale)
-                # result = await self.mcp_client.call_tool(
-                #     name=tool_name,
-                #     arguments=validated_params.dict()
-                # )
-                result = {}  # <— placeholder
+            norm_msgs = msgs if isinstance(msgs[0], BaseMessage) else messages_from_dict(msgs)
 
-                if isinstance(result, (dict, list)):
-                    return json.dumps(result, indent=2, ensure_ascii=False)
-                return str(result)
-
-            except Exception as e:
-                return f"Error executing {tool_name}: {str(e)}"
-
-        return StructuredTool.from_function(
-            name=tool_name,
-            description=tool_description,
-            args_schema=input_model,
-            coroutine=tool_function,
-        )
-
-
-    def talk_to_lurch(self, message:str="") -> AsyncIterator[Output]:
-        if len(message) > 0:
-           return self.chain.astream({"input": message}, stream_mode="values")
-
-        return None
+            for m in norm_msgs:
+                yield m

@@ -4,6 +4,8 @@ import contextlib
 import logging
 import os
 
+from langchain_ollama import ChatOllama
+
 from integrations.ha.ha_mcp_connector import HAMCPConnector
 from brain.lurch_brain import Lurch
 
@@ -12,17 +14,17 @@ async def run():
     connector = HAMCPConnector(os.getenv('HA_BASE_URL', ""), os.getenv("HA_API_TOKEN", ""))
     connector_task = asyncio.create_task(connector.connect_and_run())  # long-running
 
-    tools = await connector.get_tools()
-
-    lurch = Lurch(tools)
+    model = ChatOllama(model="qwen3:30b", reasoning=True)
+    lurch = await Lurch(model, connector).startup()
 
     while True:
         user_input = input("$ ")
         if user_input == 'bye':
             break
 
-        async for step in lurch.talk_to_lurch(message=user_input):
-            print(f'> {step}')
+        if len(user_input) > 0:
+            async for step in lurch.talk_to_lurch(message=user_input):
+                print(f'> {step.text()}')
 
     connector_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):

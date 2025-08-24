@@ -70,3 +70,6 @@ test:
 
 run:
 	@if command -v pipenv > /dev/null; then pipenv run python src/main.py; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi
+
+run-debug:
+	@if command -v pipenv > /dev/null; then pipenv run python src/main.py --log=DEBUG; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi
