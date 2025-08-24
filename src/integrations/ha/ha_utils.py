@@ -1,5 +1,6 @@
 import json
 import logging
+from pprint import pformat
 
 from typing import Dict, Any, List
 from langchain_core.tools import Tool, StructuredTool
@@ -17,8 +18,6 @@ def _create_langchain_tool(ha_mcp_connector: HAMCPConnector, tool_data: Dict[str
 
     async def tool_function(*args, **kwargs) -> str:
 
-        logging.debug(f'Calling tool: %s', tool_name)
-
         try:
             if args:
                 if len(args) == 1 and isinstance(args[0], dict):
@@ -28,14 +27,18 @@ def _create_langchain_tool(ha_mcp_connector: HAMCPConnector, tool_data: Dict[str
                         f"{tool_name} received unexpected positional args: {args}"
                     )
 
-            validated_params = input_model(**kwargs)
+            validated_params = input_model(**kwargs).model_dump(exclude_none=True, exclude_unset=True)
+
+            logging.info(f'Calling tool: %s with params %s', tool_name, pformat(validated_params))
 
             result = await ha_mcp_connector.call_tool(
                 name=tool_name,
-                params=validated_params.model_dump(exclude_none=True, exclude_unset=True)
+                params=validated_params
             )
 
-            return json.dumps(result, indent=2, ensure_ascii=False)
+            logging.info( f'Result: %s', pformat(result))
+
+            return json.dumps(result)
 
         except Exception as e:
             return f"Error executing {tool_name}: {str(e)}"

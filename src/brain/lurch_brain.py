@@ -46,4 +46,5 @@ class Lurch:
             norm_msgs = msgs if isinstance(msgs[0], BaseMessage) else messages_from_dict(msgs)
 
             for m in norm_msgs:
+                logging.debug("talk_to_lurch: message type %s", type(norm_msgs))
                 yield m
