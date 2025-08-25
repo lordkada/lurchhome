@@ -62,7 +62,7 @@ make down-docker
 This project aims to build a "smart butler" capable of:
 
 * Managing smart home devices via **Home Assistant**
-* Interacting with users via a **Telegram Bot**
+* Interacting with users via a **Instant Messenger Bot**
 * Orchestrating multiple microservices with **OpenMCP**
 * Coordinating conversations and goals using **Langchain**
 * Maintaining shared conversation state through **Redis**
@@ -75,9 +75,9 @@ The system is designed to be modular, privacy-friendly, and extendable.
 ## 🧩 Architecture Components
 
 | Component           | Description                                                                |
-| ------------------- | -------------------------------------------------------------------------- |
+|---------------------| -------------------------------------------------------------------------- |
 | `Home Assistant`    | Home automation hub integration with existing registered devices           |
-| `Telegram Bot`      | User-facing interface for interacting with the butler                      |
+| `IM Bot`            | User-facing interface for interacting with the butler                      |
 | `Langchain + Redis` | Handles context-aware conversations and memory between agents              |
 | `OpenMCP`           | Orchestrates microservices and tools across the system                     |
 | `AI Services`       | Specialized microservices for image/face recognition and security features |
@@ -117,6 +117,7 @@ make install-dev   # Install dev dependencies
 make shell         # Open a pipenv shell
 make test          # Run tests with pytest
 make run           # Run main application
+make run-debug     # Run main application with logging at the DEBUG level
 ```
 
 ### 📦 Project Structure (WIP)
@@ -126,8 +127,12 @@ make run           # Run main application
 │   └── volumes/
 │       └── homeassistant/
 ├── src/
+│   └── brain/
+│       └── lurch_brain.py
+│       └── lurch_prompt.py
 │   └── integrations/
-│       └── home_assistant_connector.py
+│       └── ha_mcp_connector.py
+│       └── ha_utils.py
 │   └── main.py
 ├── tests/
 │       └── test_home_assistant_connector.py

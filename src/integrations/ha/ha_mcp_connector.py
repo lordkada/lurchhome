@@ -8,8 +8,8 @@ Read more: https://modelcontextprotocol.io/specification/2024-11-05
 MCP_PROTOCOL_VERSION = "2024-11-05"
 
 
-def _create_jsonrpc_payload(method: str, params:Dict=None, rpc_id=None) -> str:
-    payload:Dict[str, any] = {
+def _create_jsonrpc_payload(method: str, params: Dict = None, rpc_id=None) -> str:
+    payload: Dict[str, any] = {
         "jsonrpc": "2.0"
     }
 
@@ -45,7 +45,7 @@ def _build_request_body(method: str, params=None, request_id=None):
     return request_body
 
 
-class HomeAssistantConnector:
+class HAMCPConnector:
     def __init__(self, ha_base_url: str, ha_api_token: str):
         self.base_url: str = ha_base_url
         self.api_token: str = ha_api_token
@@ -107,7 +107,7 @@ class HomeAssistantConnector:
         finally:
             if id in self._pending_requests:
                 del self._pending_requests[id]
-            logging.info(self._pending_requests)
+            logging.debug(self._pending_requests)
 
     async def __command_processor(self, forever=True):
         await self._messages_url_ready.wait()
@@ -138,6 +138,8 @@ class HomeAssistantConnector:
         headers = dict(self._std_http_header, **{'Accept': 'text/event-stream'})
 
         async with self._client.stream('GET', f'{self.base_url}/mcp_server/sse', headers=headers) as response:
+            logging.debug("SSE event: %s", response)
+
             if response.status_code != 200:
                 error_text = await response.aread()
                 raise httpx.HTTPError(f"HTTP {response.status_code}: {error_text.decode()}")
@@ -176,7 +178,7 @@ class HomeAssistantConnector:
             cmd_task = asyncio.create_task(self.__command_processor(), name="command_processor")
 
             try:
-                logging.info("Waiting the messages URL from the HA server")
+                logging.debug("Waiting the messages URL from the HA server")
                 await self._messages_url_ready.wait()
 
                 init_params = {
@@ -187,8 +189,8 @@ class HomeAssistantConnector:
                         "version": "1.0.0"
                     }
                 }
-                init_response:Dict = await self.__queue_request_and_wait_response("initialize", params=init_params)
-                logging.info(init_response)
+                init_response: Dict = await self.__queue_request_and_wait_response("initialize", params=init_params)
+                logging.debug(init_response)
                 if init_response:
                     await self.__queue_request("notifications/initialized")
                     self._sse_initialized.set()
@@ -205,3 +207,10 @@ class HomeAssistantConnector:
     async def get_tools(self) -> Dict[str, any]:
         await self._sse_initialized.wait()
         return await self.__queue_request_and_wait_response("tools/list")
+
+    async def call_tool(self, *, name= str, params= Dict) -> Dict[str, any]:
+        await self._sse_initialized.wait()
+        return await self.__queue_request_and_wait_response("tools/call", params={
+            'name': name,
+            'arguments': params or {}
+        })

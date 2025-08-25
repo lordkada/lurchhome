@@ -4,17 +4,31 @@ import contextlib
 import logging
 import os
 
-from integrations.home_assistant_connector import HomeAssistantConnector
+from langchain_core.messages import AIMessage
+from langchain_ollama import ChatOllama
+
+from integrations.ha.ha_mcp_connector import HAMCPConnector
+from brain.lurch_brain import Lurch
+
 
 async def run():
-    ha_base_url: str = os.getenv('HA_BASE_URL', "")
-    ha_api_token: str = os.getenv("HA_API_TOKEN", "")
-
-    connector = HomeAssistantConnector(ha_base_url, ha_api_token)
+    connector = HAMCPConnector(os.getenv('HA_BASE_URL'), os.getenv("HA_API_TOKEN"))
     connector_task = asyncio.create_task(connector.connect_and_run())  # long-running
+    model = ChatOllama(model=os.getenv('LURCH_LLM_MODEL'), reasoning=True)
+    lurch = await Lurch(model, connector).startup()
 
-    tools = await connector.get_tools()
-    print(tools)
+    while True:
+        user_input = input("$ ")
+        if user_input == 'bye':
+            break
+
+        if len(user_input) > 0:
+            async for step in lurch.talk_to_lurch(message=user_input):
+                if isinstance(step, AIMessage):
+                    if hasattr(step, 'content') and step.content:
+                        print(f'> {step.text()}')
+                    else:
+                        print(f'| working')
 
     connector_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):

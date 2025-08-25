@@ -5,6 +5,9 @@ name = "pypi"
 
 [packages]
 httpx = "*"
+langchain-ollama = "*"
+langgraph = "*"
+jsonschema-pydantic = "*"
 
 [dev-packages]
 pytest = "*"
