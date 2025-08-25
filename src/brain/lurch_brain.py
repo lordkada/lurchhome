@@ -1,20 +1,17 @@
+import json
 import logging
-from typing import Optional, AsyncIterator, Self, cast
+from pprint import pprint
+from typing import Optional, AsyncIterator, Self, cast, Dict
 
 from langchain_core.language_models import chat_models
-from langchain_core.messages import messages_from_dict, BaseMessage
+from langchain_core.messages import messages_from_dict, BaseMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langgraph.prebuilt import create_react_agent
 
-from brain.lurch_prompt import SYSTEM_MSG
+from brain.lurch_prompt import LURCH_PROMPT
 from integrations.ha.ha_mcp_connector import HAMCPConnector
-from integrations.ha.ha_utils import build_tools
-
-prompt = ChatPromptTemplate.from_messages([
-    ("system", SYSTEM_MSG),
-    ("human", "{input}")
-])
+from integrations.ha.ha_utils import build_tools, get_status
 
 
 class Lurch:
@@ -31,7 +28,18 @@ class Lurch:
         self.chain = Optional[Runnable]
 
     async def startup(self) -> Self:
-        self.chain = prompt | create_react_agent(self.model, await build_tools(self.ha_mcp_connector))
+        tools = await build_tools(self.ha_mcp_connector)
+        live_context = await self.ha_mcp_connector.call_tool(name='GetLiveContext', params={})
+        status = (json.loads(live_context.get('content', {})[0].get('text')))['result']
+        logging.info('Status %s', status)
+
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessage(LURCH_PROMPT),
+            SystemMessage(status),
+            ("human", "{input}")
+        ])
+
+        self.chain = prompt | create_react_agent(self.model, tools)
         return self
 
     async def talk_to_lurch(self, message:str="") -> AsyncIterator[BaseMessage]:

@@ -208,9 +208,9 @@ class HAMCPConnector:
         await self._sse_initialized.wait()
         return await self.__queue_request_and_wait_response("tools/list")
 
-    async def call_tool(self, name: str, params= Dict) -> Dict[str, any]:
+    async def call_tool(self, *, name= str, params= Dict) -> Dict[str, any]:
         await self._sse_initialized.wait()
         return await self.__queue_request_and_wait_response("tools/call", params={
             'name': name,
-            'arguments': params
+            'arguments': params or {}
         })

@@ -17,7 +17,6 @@ def _create_langchain_tool(ha_mcp_connector: HAMCPConnector, tool_data: Dict[str
     input_model = jsonschema_to_pydantic(input_schema)
 
     async def tool_function(*args, **kwargs) -> str:
-
         try:
             if args:
                 if len(args) == 1 and isinstance(args[0], dict):
@@ -54,6 +53,9 @@ async def build_tools(ha_mcp_connector: HAMCPConnector) -> List[Tool]:
     langchain_tools = []
     for tool_data in ((await ha_mcp_connector.get_tools()).get('tools', [])):
         langchain_tool = _create_langchain_tool(ha_mcp_connector, tool_data)
+        logging.info('Created tool: %s with params', langchain_tool.get_name())
         langchain_tools.append(langchain_tool)
-
     return langchain_tools
+
+async def get_status(ha_mcp_connector: HAMCPConnector) -> Dict:
+    return await ha_mcp_connector.get_status()
