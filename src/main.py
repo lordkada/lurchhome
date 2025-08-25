@@ -4,6 +4,7 @@ import contextlib
 import logging
 import os
 
+from langchain_core.messages import AIMessage
 from langchain_ollama import ChatOllama
 
 from integrations.ha.ha_mcp_connector import HAMCPConnector
@@ -23,7 +24,11 @@ async def run():
 
         if len(user_input) > 0:
             async for step in lurch.talk_to_lurch(message=user_input):
-                print(f'> {step.text()}')
+                if isinstance(step, AIMessage):
+                    if hasattr(step, 'content') and step.content:
+                        print(f'> {step.text()}')
+                    else:
+                        print(f'| working')
 
     connector_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):

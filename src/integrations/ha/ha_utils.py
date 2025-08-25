@@ -28,14 +28,15 @@ def _create_langchain_tool(ha_mcp_connector: HAMCPConnector, tool_data: Dict[str
 
             validated_params = input_model(**kwargs).model_dump(exclude_none=True, exclude_unset=True)
 
-            logging.info(f'Calling tool: %s with params %s', tool_name, pformat(validated_params))
+            logging.info(f'Calling tool: %s', tool_name)
+            logging.debug(f'Params %s', pformat(validated_params))
 
             result = await ha_mcp_connector.call_tool(
                 name=tool_name,
                 params=validated_params
             )
 
-            logging.info( f'Result: %s', pformat(result))
+            logging.debug( f'Result: %s', pformat(result))
 
             return json.dumps(result)
 
@@ -53,7 +54,7 @@ async def build_tools(ha_mcp_connector: HAMCPConnector) -> List[Tool]:
     langchain_tools = []
     for tool_data in ((await ha_mcp_connector.get_tools()).get('tools', [])):
         langchain_tool = _create_langchain_tool(ha_mcp_connector, tool_data)
-        logging.info('Created tool: %s with params', langchain_tool.get_name())
+        logging.info('Created tool: %s', langchain_tool.get_name())
         langchain_tools.append(langchain_tool)
     return langchain_tools
 

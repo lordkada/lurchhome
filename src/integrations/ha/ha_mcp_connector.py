@@ -107,7 +107,7 @@ class HAMCPConnector:
         finally:
             if id in self._pending_requests:
                 del self._pending_requests[id]
-            logging.info(self._pending_requests)
+            logging.debug(self._pending_requests)
 
     async def __command_processor(self, forever=True):
         await self._messages_url_ready.wait()
@@ -178,7 +178,7 @@ class HAMCPConnector:
             cmd_task = asyncio.create_task(self.__command_processor(), name="command_processor")
 
             try:
-                logging.info("Waiting the messages URL from the HA server")
+                logging.debug("Waiting the messages URL from the HA server")
                 await self._messages_url_ready.wait()
 
                 init_params = {
@@ -190,7 +190,7 @@ class HAMCPConnector:
                     }
                 }
                 init_response: Dict = await self.__queue_request_and_wait_response("initialize", params=init_params)
-                logging.info(init_response)
+                logging.debug(init_response)
                 if init_response:
                     await self.__queue_request("notifications/initialized")
                     self._sse_initialized.set()
