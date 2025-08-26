@@ -124,20 +124,30 @@ make run-debug     # Run main application with logging at the DEBUG level
 
 ```text
 ├── docker/
-│   └── volumes/
+│   └── config/
+│       └── redis.conf
+│   └── volumes/ (<-- RUNTIME)
 │       └── homeassistant/
+│       └── redis/
 ├── src/
 │   └── brain/
 │       └── lurch_brain.py
 │       └── lurch_prompt.py
 │   └── integrations/
-│       └── ha_mcp_connector.py
-│       └── ha_utils.py
+│       └── ha
+│           └── ha_mcp_connector.py
+│           └── ha_utils.py
+│   └── persistence/
+│       └── storage_handler.py
 │   └── main.py
 ├── tests/
 │       └── test_home_assistant_connector.py
 ├── .env.example
+├── docker-compose.yml
+├── LICENSE
 ├── Makefile
+├── Pipfile
+├── pytest.ini
 ├── README.md
 ```
 
@@ -153,4 +163,4 @@ Feel free to fork, clone, open issues, or submit PRs. The goal is to build a pra
 
 ---
 
-Developed with ❤️ by Lord KADA.
+Developed with ❤️ by Lord KADA
