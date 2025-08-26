@@ -8,6 +8,7 @@ import os
 import integrations.ha.ha_mcp_connector as ha_mcp_connector
 from integrations.ha.ha_mcp_connector import HAMCPConnector
 
+
 class TestUtilityFunctions:
     """Test per le funzioni utility."""
 
@@ -109,6 +110,7 @@ class TestUtilityFunctions:
         }
         assert result == expected
 
+
 class TestHomeAssistantConnector:
     @pytest.fixture
     def connector(self):
@@ -121,7 +123,6 @@ class TestHomeAssistantConnector:
             assert connector.api_token == "test_token"
             assert connector.messages_url is None
 
-
     def test_init_with_env_vars(self, connector):
         assert connector.base_url == 'http://test.local'
         assert connector.api_token == 'test_token'
@@ -130,13 +131,11 @@ class TestHomeAssistantConnector:
         assert isinstance(connector._pending_requests, dict)
         assert len(connector._pending_requests) == 0
 
-
     def test_set_messages_url(self, connector: HAMCPConnector):
         test_url = "/mcp_server/messages/TEST123"
         connector._HAMCPConnector__set_messages_url(test_url)
         assert connector.messages_url == test_url
         assert connector._messages_url_ready.is_set()
-
 
     @pytest.mark.asyncio
     async def test_do_post_request_not_initialized(self, connector):
@@ -242,7 +241,6 @@ class TestHomeAssistantConnector:
         await connector._HAMCPConnector__command_processor(forever=False)
 
         mock_client.post.assert_called_once()
-
 
     @pytest.mark.asyncio
     async def test_get_tools_not_initialized(self, connector):

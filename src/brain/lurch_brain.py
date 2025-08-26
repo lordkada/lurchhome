@@ -40,7 +40,7 @@ class Lurch:
         self.chain = prompt | create_react_agent(self.model, tools)
         return self
 
-    async def talk_to_lurch(self, message:str="") -> AsyncIterator[BaseMessage]:
+    async def talk_to_lurch(self, message: str = "") -> AsyncIterator[BaseMessage]:
 
         live_context = await self.ha_mcp_connector.call_tool(name='GetLiveContext', params={})
         status = (json.loads(live_context.get('content', {})[0].get('text')))['result']
@@ -69,11 +69,12 @@ class Lurch:
                     try:
                         input_tokens, output_tokens = (m.response_metadata.get('prompt_eval_count'),
                                                        m.response_metadata.get('eval_count'))
-                        total_input_tokens, total_output_tokens = await self.storage_handler.update_llm_tokens(input_tokens=input_tokens,
-                                                                                                               output_tokens=output_tokens)
+                        total_input_tokens, total_output_tokens = await self.storage_handler.update_llm_tokens(
+                            input_tokens=input_tokens,
+                            output_tokens=output_tokens)
                         logging.info('Current step LLM usage stats: %i->%i. Total LLM stats: %i->%i',
                                      input_tokens, output_tokens,
                                      total_input_tokens, total_output_tokens)
                     except KeyError:
-                       pass
+                        pass
                 yield m

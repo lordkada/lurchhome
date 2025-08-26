@@ -36,6 +36,7 @@ async def run():
     with contextlib.suppress(asyncio.CancelledError):
         await ha_connector_task
 
+
 if __name__ == "__main__":
     print(r"""
       L   U   U RRRR   CCCC  H  H  H  H  OOO   M   M  EEEE
