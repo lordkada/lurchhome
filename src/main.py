@@ -9,13 +9,15 @@ from langchain_ollama import ChatOllama
 
 from integrations.ha.ha_mcp_connector import HAMCPConnector
 from brain.lurch_brain import Lurch
+from persistence.storage_handler import StorageHandler
 
 
 async def run():
-    connector = HAMCPConnector(os.getenv('HA_BASE_URL'), os.getenv("HA_API_TOKEN"))
-    connector_task = asyncio.create_task(connector.connect_and_run())  # long-running
+    ha_connector = HAMCPConnector(os.getenv('HA_BASE_URL'), os.getenv("HA_API_TOKEN"))
+    ha_connector_task = asyncio.create_task(ha_connector.connect_and_run())  # long-running
     model = ChatOllama(model=os.getenv('LURCH_LLM_MODEL'), reasoning=True)
-    lurch = await Lurch(model, connector).startup()
+    storage_handler = StorageHandler()
+    lurch = await Lurch(model, ha_connector, storage_handler).startup()
 
     while True:
         user_input = input("$ ")
@@ -30,9 +32,9 @@ async def run():
                     else:
                         print(f'| working')
 
-    connector_task.cancel()
+    ha_connector_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
-        await connector_task
+        await ha_connector_task
 
 if __name__ == "__main__":
     print(r"""

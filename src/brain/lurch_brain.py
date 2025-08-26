@@ -10,20 +10,22 @@ from langgraph.prebuilt import create_react_agent
 
 from brain.lurch_prompt import LURCH_PROMPT
 from integrations.ha.ha_mcp_connector import HAMCPConnector
-from integrations.ha.ha_utils import build_tools, get_status
+from integrations.ha.ha_utils import build_tools
+from persistence.storage_handler import StorageHandler
 
 
 class Lurch:
 
-    def __init__(self, model: chat_models, ha_mcp_connector: HAMCPConnector):
+    def __init__(self, model: chat_models, ha_mcp_connector: HAMCPConnector, storage_handler: StorageHandler):
         if model is None:
             raise TypeError("model can't be None")
-        self.model = model
 
         if ha_mcp_connector is None:
             raise TypeError("ha_mcp_connector can't be None")
-        self.ha_mcp_connector = ha_mcp_connector
 
+        self.model = model
+        self.ha_mcp_connector = ha_mcp_connector
+        self.storage_handler = storage_handler
         self.chain = Optional[Runnable]
 
     async def startup(self) -> Self:
@@ -62,4 +64,16 @@ class Lurch:
                     logging.debug(f"Reasoning: {m.additional_kwargs}...")
 
                 logging.debug("talk_to_lurch: message type %s", type(m))
+
+                if self.storage_handler:
+                    try:
+                        input_tokens, output_tokens = (m.response_metadata.get('prompt_eval_count'),
+                                                       m.response_metadata.get('eval_count'))
+                        total_input_tokens, total_output_tokens = await self.storage_handler.update_llm_tokens(input_tokens=input_tokens,
+                                                                                                               output_tokens=output_tokens)
+                        logging.info('Current step LLM usage stats: %i->%i. Total LLM stats: %i->%i',
+                                     input_tokens, output_tokens,
+                                     total_input_tokens, total_output_tokens)
+                    except KeyError:
+                       pass
                 yield m
