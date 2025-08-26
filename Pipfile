@@ -8,6 +8,7 @@ httpx = "*"
 langchain-ollama = "*"
 langgraph = "*"
 jsonschema-pydantic = "*"
+redis = "*"
 
 [dev-packages]
 pytest = "*"
