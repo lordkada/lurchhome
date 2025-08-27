@@ -114,11 +114,11 @@ class TestUtilityFunctions:
 class TestHomeAssistantConnector:
     @pytest.fixture
     def connector(self):
-        return HAMCPConnector('http://test.local', 'test_token')
+        return HAMCPConnector(ha_base_url='http://test.local', ha_api_token='test_token')
 
     def test_init_default_values(self):
         with patch.dict(os.environ, {}, clear=True):
-            connector = HAMCPConnector('http://test.local', 'test_token')
+            connector = HAMCPConnector(ha_base_url='http://test.local', ha_api_token='test_token')
             assert connector.base_url == "http://test.local"
             assert connector.api_token == "test_token"
             assert connector.messages_url is None

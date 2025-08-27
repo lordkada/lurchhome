@@ -26,7 +26,7 @@ async def ha_ws_subscribe(ws, event_types=None):
 
 
 class HAWSConnector:
-    def __init__(self, ha_base_url: str, ha_api_token: str):
+    def __init__(self, *, ha_base_url: str, ha_api_token: str):
         self.base_url: str = ha_base_url
         self.api_token: str = ha_api_token
 

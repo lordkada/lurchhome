@@ -17,11 +17,11 @@ async def run():
     ha_base_url = os.getenv('HA_BASE_URL')
     ha_api_token = os.getenv("HA_API_TOKEN")
 
-    ha_mcp_connector = HAMCPConnector(ha_base_url, ha_api_token)
-    ha_ws_connector = HAWSConnector(ha_base_url, ha_api_token)
+    ha_mcp_connector = HAMCPConnector(ha_base_url= ha_base_url, ha_api_token=ha_api_token)
+    ha_ws_connector = HAWSConnector(ha_base_url= ha_base_url, ha_api_token=ha_api_token)
 
     async with asyncio.TaskGroup() as tg:
-        t_mcp =tg.create_task(ha_mcp_connector.connect_and_run())
+        t_mcp = tg.create_task(ha_mcp_connector.connect_and_run())
         t_ws = tg.create_task(ha_ws_connector.listen_ws())
 
         model = ChatOllama(model=os.getenv('LURCH_LLM_MODEL'), reasoning=True)
