@@ -9,6 +9,7 @@ langchain-ollama = "*"
 langgraph = "*"
 jsonschema-pydantic = "*"
 redis = "*"
+httpx-ws = "*"
 
 [dev-packages]
 pytest = "*"

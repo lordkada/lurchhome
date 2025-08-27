@@ -11,22 +11,30 @@ from langgraph.prebuilt import create_react_agent
 from brain.lurch_prompt import LURCH_PROMPT
 from integrations.ha.ha_mcp_connector import HAMCPConnector
 from integrations.ha.ha_utils import build_tools
+from integrations.ha.ha_ws_connector import HAWSConnector
 from persistence.storage_handler import StorageHandler
 
 
 class Lurch:
 
-    def __init__(self, model: chat_models, ha_mcp_connector: HAMCPConnector, storage_handler: StorageHandler):
-        if model is None:
+    def __init__(self,
+                 *,
+                 llm_model: chat_models,
+                 ha_mcp_connector: HAMCPConnector,
+                 storage_handler: StorageHandler,
+                 ha_ws_connector: Optional[HAWSConnector]):
+
+        if llm_model is None:
             raise TypeError("model can't be None")
 
         if ha_mcp_connector is None:
             raise TypeError("ha_mcp_connector can't be None")
 
-        self.model = model
+        self.llm_model = llm_model
         self.ha_mcp_connector = ha_mcp_connector
         self.storage_handler = storage_handler
         self.chain = Optional[Runnable]
+        self.ha_ws_connector = ha_ws_connector
 
     async def startup(self) -> Self:
         tools = await build_tools(self.ha_mcp_connector)
@@ -37,11 +45,11 @@ class Lurch:
             ("human", "{input}")
         ])
 
-        self.chain = prompt | create_react_agent(self.model, tools)
+        self.chain = prompt | create_react_agent(self.llm_model, tools)
+
         return self
 
     async def talk_to_lurch(self, message: str = "") -> AsyncIterator[BaseMessage]:
-
         live_context = await self.ha_mcp_connector.call_tool(name='GetLiveContext', params={})
         status = (json.loads(live_context.get('content', {})[0].get('text')))['result']
         logging.debug('Status %s', status)
