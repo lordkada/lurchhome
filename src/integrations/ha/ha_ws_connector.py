@@ -1,7 +1,13 @@
 import json
 import logging
+from json import JSONDecodeError
+from typing import Optional
 
 from httpx_ws import aconnect_ws
+
+from persistence.storage_handler import StorageHandler
+
+EVENT_TYPES = ['state_changed']
 
 
 async def ha_ws_subscribe(ws, event_types=None):
@@ -27,9 +33,10 @@ async def ha_ws_subscribe(ws, event_types=None):
 
 
 class HAWSConnector:
-    def __init__(self, *, ha_base_url: str, ha_api_token: str):
+    def __init__(self, *, ha_base_url: str, ha_api_token: str, storage_handler: Optional[StorageHandler] = None):
         self.base_url: str = ha_base_url
         self.api_token: str = ha_api_token
+        self.storage_handler: Optional[StorageHandler] = storage_handler
 
     async def listen_ws(self):
         async with aconnect_ws(f'{self.base_url}/api/websocket') as ws:
@@ -43,21 +50,25 @@ class HAWSConnector:
                 raise RuntimeError(f"Auth failed: {auth_reply}")
 
             logging.info("Logged to the Home Assistant Websocket")
-            await ha_ws_subscribe(ws, ["state_changed"])
+            await ha_ws_subscribe(ws, EVENT_TYPES)
 
             while True:
                 try:
-                    data = json.loads(await ws.receive_text())
-                    logging.debug("listen_ws: %s", data)
-                    event = data.get('event', None)
+                    payload = json.loads(await ws.receive_text())
+                    logging.debug("listen_ws: %s", payload)
+                    event = payload.get('event', None)
                     if event:
                         data = event.get("data", {})
                         new_state = data.get('new_state', {})
                         ret_event = {
                             'entity_id': data.get("entity_id"),
                             'state': new_state.get('state'),
-                            'attributes': new_state.get('attributes')
+                            'attributes': json.dumps(new_state.get('attributes'), separators=(",", ":")),
+                            'timestamp': event.get("time_fired") or event.get("time") or "",
+                            'event_type': event.get("event_type") or ""
                         }
+                        if self.storage_handler:
+                            await self.storage_handler.store_ha_event(event=ret_event)
 
-                except Exception as e:
+                except JSONDecodeError as e:
                     logging.error(f'listen_ws: json decode exception')

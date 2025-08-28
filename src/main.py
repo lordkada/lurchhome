@@ -17,15 +17,16 @@ async def run():
     ha_base_url = os.getenv('HA_BASE_URL')
     ha_api_token = os.getenv("HA_API_TOKEN")
 
+    storage_handler = StorageHandler()
     ha_mcp_connector = HAMCPConnector(ha_base_url=ha_base_url, ha_api_token=ha_api_token)
-    ha_ws_connector = HAWSConnector(ha_base_url=ha_base_url, ha_api_token=ha_api_token)
+    ha_ws_connector = HAWSConnector(ha_base_url=ha_base_url, ha_api_token=ha_api_token, storage_handler=storage_handler)
 
     async with asyncio.TaskGroup() as tg:
         t_mcp = tg.create_task(ha_mcp_connector.connect_and_run())
         t_ws = tg.create_task(ha_ws_connector.listen_ws())
 
         model = ChatOllama(model=os.getenv('LURCH_LLM_MODEL'), reasoning=True)
-        storage_handler = StorageHandler()
+
         lurch = await (Lurch(llm_model=model,
                              ha_mcp_connector=ha_mcp_connector,
                              storage_handler=storage_handler,
