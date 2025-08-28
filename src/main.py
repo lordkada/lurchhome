@@ -5,7 +5,7 @@ import logging
 import os
 
 from langchain_core.messages import AIMessage
-from langchain_ollama import ChatOllama
+from langchain.chat_models.base import init_chat_model
 
 from integrations.ha.ha_mcp_connector import HAMCPConnector
 from brain.lurch_brain import Lurch
@@ -25,7 +25,7 @@ async def run():
         t_mcp = tg.create_task(ha_mcp_connector.connect_and_run())
         t_ws = tg.create_task(ha_ws_connector.listen_ws())
 
-        model = ChatOllama(model=os.getenv('LURCH_LLM_MODEL'), reasoning=True)
+        model = init_chat_model(model=os.getenv('LURCH_LLM_MODEL'), model_provider=os.getenv('LURCH_LLM_PROVIDER'))
 
         lurch = await (Lurch(llm_model=model,
                              ha_mcp_connector=ha_mcp_connector,

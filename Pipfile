@@ -5,11 +5,11 @@ name = "pypi"
 
 [packages]
 httpx = "*"
-langchain-ollama = "*"
 langgraph = "*"
 jsonschema-pydantic = "*"
 redis = "*"
 httpx-ws = "*"
+langchain = {extras = ["openai", "ollama"], version = "*"}
 
 [dev-packages]
 pytest = "*"
