@@ -49,8 +49,6 @@ make up-docker
 # (optional) check status & logs
 make status-docker
 make logs-docker
-# stop
-make down-docker
 ```
 
 > Local dev without Docker: `make run` (after creating `.env`).
