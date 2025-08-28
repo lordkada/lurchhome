@@ -73,16 +73,25 @@ class Lurch:
 
                 logging.debug("talk_to_lurch: message type %s", type(m))
 
-                if self.storage_handler:
+                if self.storage_handler and hasattr(m, 'response_metadata'):
+                    response_metadata = m.response_metadata
                     try:
-                        input_tokens, output_tokens = (m.response_metadata.get('prompt_eval_count'),
-                                                       m.response_metadata.get('eval_count'))
-                        total_input_tokens, total_output_tokens = await self.storage_handler.update_llm_tokens(
-                            input_tokens=input_tokens,
-                            output_tokens=output_tokens)
-                        logging.info('Current step LLM usage stats: %i->%i. Total LLM stats: %i->%i',
-                                     input_tokens, output_tokens,
-                                     total_input_tokens, total_output_tokens)
+                        input_tokens, output_tokens = 0, 0
+                        if 'prompt_eval_count' in response_metadata and 'eval_count' in response_metadata:
+                            input_tokens = response_metadata.get('prompt_eval_count')
+                            output_tokens = response_metadata.get('eval_count')
+                        elif 'token_usage' in response_metadata:
+                            token_usage = response_metadata.get('token_usage')
+                            input_tokens = token_usage.get('prompt_tokens')
+                            output_tokens = token_usage.get('completion_tokens')
+
+                        if input_tokens + output_tokens > 0:
+                            total_input_tokens, total_output_tokens = await self.storage_handler.update_llm_tokens(
+                                input_tokens=input_tokens,
+                                output_tokens=output_tokens)
+                            logging.info('Current step LLM usage stats: %i->%i. Total LLM stats: %i->%i',
+                                         input_tokens, output_tokens,
+                                         total_input_tokens, total_output_tokens)
                     except KeyError:
                         pass
                 yield m

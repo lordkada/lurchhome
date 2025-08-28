@@ -17,6 +17,16 @@ async def run():
     ha_base_url = os.getenv('HA_BASE_URL')
     ha_api_token = os.getenv("HA_API_TOKEN")
 
+    '''
+        SET_ENVIRONMENT_API_KEY allows the user to specify a variable whose value will be injected into
+        the Operating System environment, eg:
+
+        SET_ENVIRONMENT_API_KEY=OPENAI_API_KEY
+        OPENAI_API_KEY=<your API token>
+    '''
+    if os.getenv("SET_ENVIRONMENT_API_KEY") and os.getenv(os.getenv("SET_ENVIRONMENT_API_KEY")):
+        os.environ[os.getenv("SET_ENVIRONMENT_API_KEY")] = os.getenv(os.getenv("SET_ENVIRONMENT_API_KEY"))
+
     storage_handler = StorageHandler()
     ha_mcp_connector = HAMCPConnector(ha_base_url=ha_base_url, ha_api_token=ha_api_token)
     ha_ws_connector = HAWSConnector(ha_base_url=ha_base_url, ha_api_token=ha_api_token, storage_handler=storage_handler)
