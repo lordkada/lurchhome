@@ -137,6 +137,7 @@ make run-debug     # Run main application with logging at the DEBUG level
 │       └── ha
 │           └── ha_mcp_connector.py
 │           └── ha_utils.py
+│           └── ha_ws_connector.py
 │   └── persistence/
 │       └── storage_handler.py
 │   └── main.py

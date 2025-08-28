@@ -46,7 +46,7 @@ def _build_request_body(method: str, params=None, request_id=None):
 
 
 class HAMCPConnector:
-    def __init__(self, ha_base_url: str, ha_api_token: str):
+    def __init__(self, *, ha_base_url: str, ha_api_token: str):
         self.base_url: str = ha_base_url
         self.api_token: str = ha_api_token
         self.messages_url: str | None = None
@@ -74,7 +74,7 @@ class HAMCPConnector:
         url = f'{self.base_url}{self.messages_url}'
 
         logging.debug(f'__do_post_request: {url}')
-        logging.debug(payload)
+        logging.debug(f'__do_post_request/payload: %s', payload)
 
         response = await self._client.post(
             url,
@@ -107,7 +107,6 @@ class HAMCPConnector:
         finally:
             if id in self._pending_requests:
                 del self._pending_requests[id]
-            logging.debug(self._pending_requests)
 
     async def __command_processor(self, forever=True):
         await self._messages_url_ready.wait()
@@ -145,6 +144,7 @@ class HAMCPConnector:
                 raise httpx.HTTPError(f"HTTP {response.status_code}: {error_text.decode()}")
 
             async for line in response.aiter_lines():
+                logging.debug("line: %s", line)
                 if line.startswith('data: '):
                     data = line[6:].strip()
 
@@ -153,7 +153,6 @@ class HAMCPConnector:
 
                     try:
                         event_data = json.loads(data)
-                        logging.debug("SSE event:", event_data)
 
                         if 'id' in event_data and event_data['id'] in self._pending_requests:
                             request_id = event_data['id']
