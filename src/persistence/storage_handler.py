@@ -5,8 +5,8 @@ from typing import Dict
 import redis.asyncio as aioredis
 from redis import RedisError
 
-INPUT_TOKEN_KEY = 'i_tok'
-OUTPUT_TOKEN_KEY = 'o_tok'
+INPUT_TOKEN_KEY = 'lurch:llm:i_tok'
+OUTPUT_TOKEN_KEY = 'lurch:llm:o_tok'
 EVENTS_STREAM_KEY = 'lurch:ha:events'
 EVENTS_MAXLEN = 10
 
