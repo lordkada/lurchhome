@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Optional, AsyncIterator, Self
 
-from langchain_core.language_models import chat_models
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import messages_from_dict, BaseMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
@@ -19,7 +19,7 @@ class Lurch:
 
     def __init__(self,
                  *,
-                 llm_model: chat_models,
+                 llm_model: BaseChatModel,
                  ha_mcp_connector: HAMCPConnector,
                  storage_handler: StorageHandler,
                  ha_ws_connector: Optional[HAWSConnector]):

@@ -6,6 +6,7 @@ from httpx_ws import aconnect_ws
 
 async def ha_ws_subscribe(ws, event_types=None):
     next_id = 1
+
     async def send_and_wait(payload):
         nonlocal next_id
         payload["id"] = next_id
@@ -42,9 +43,21 @@ class HAWSConnector:
                 raise RuntimeError(f"Auth failed: {auth_reply}")
 
             logging.info("Logged to the Home Assistant Websocket")
-
             await ha_ws_subscribe(ws, ["state_changed"])
 
             while True:
-                data = await ws.receive_text()
-                logging.debug("listen_ws: %s", data)
+                try:
+                    data = json.loads(await ws.receive_text())
+                    logging.debug("listen_ws: %s", data)
+                    event = data.get('event', None)
+                    if event:
+                        data = event.get("data", {})
+                        new_state = data.get('new_state', {})
+                        ret_event = {
+                            'entity_id': data.get("entity_id"),
+                            'state': new_state.get('state'),
+                            'attributes': new_state.get('attributes')
+                        }
+
+                except Exception as e:
+                    logging.error(f'listen_ws: json decode exception')
