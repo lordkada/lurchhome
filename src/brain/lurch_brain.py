@@ -10,9 +10,9 @@ from langgraph.prebuilt import create_react_agent
 
 from brain.lurch_prompt import LURCH_PROMPT
 from integrations.ha.ha_mcp_connector import HAMCPConnector
-from integrations.ha.ha_utils import build_tools
 from integrations.ha.ha_ws_connector import HAWSConnector
 from persistence.storage_handler import StorageHandler
+from tools.tools_utils import build_tools
 
 
 class Lurch:
@@ -37,7 +37,7 @@ class Lurch:
         self.ha_ws_connector = ha_ws_connector
 
     async def startup(self) -> Self:
-        tools = await build_tools(self.ha_mcp_connector)
+        tools = await build_tools(with_tools=self.ha_mcp_connector, callable_tools=self.ha_mcp_connector)
 
         prompt = ChatPromptTemplate.from_messages([
             SystemMessage(LURCH_PROMPT),

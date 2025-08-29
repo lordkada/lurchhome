@@ -1,5 +1,8 @@
 import asyncio, logging, json, re, httpx
-from typing import Dict
+from typing import Dict, Any, List
+
+from tools.lurch_callable_tools import CallableTools
+from tools.lurch_with_tools import WithTools
 
 """
 Implementation of the MCP Protocol, version 2024-11-05
@@ -45,7 +48,7 @@ def _build_request_body(method: str, params=None, request_id=None):
     return request_body
 
 
-class HAMCPConnector:
+class HAMCPConnector(WithTools, CallableTools):
     def __init__(self, *, ha_base_url: str, ha_api_token: str):
         self.base_url: str = ha_base_url
         self.api_token: str = ha_api_token
@@ -203,11 +206,11 @@ class HAMCPConnector:
 
                 await asyncio.gather(sse_task, cmd_task, return_exceptions=True)
 
-    async def get_tools(self) -> Dict[str, any]:
+    async def get_tools(self) -> List[Dict[str, Any]]:
         await self._sse_initialized.wait()
-        return await self.__queue_request_and_wait_response("tools/list")
+        return (await self.__queue_request_and_wait_response("tools/list")).get("tools", [])
 
-    async def call_tool(self, *, name= str, params= Dict) -> Dict[str, any]:
+    async def call_tool(self, *, name=str, params=Dict) -> Dict[str, Any]:
         await self._sse_initialized.wait()
         return await self.__queue_request_and_wait_response("tools/call", params={
             'name': name,
