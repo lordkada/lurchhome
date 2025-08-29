@@ -8,13 +8,16 @@
 
 **Lurch Home** is an advanced, open-source orchestration system designed to intelligently coordinate
 domestic functions in a centralized and modular way.
-The project integrates modern AI tools, neural models, and home automation technologies — creating a true smart assistant for your home.
+The project integrates modern AI tools, neural models, and home automation technologies — creating a true smart
+assistant for your home.
 
 ---
 
 ## ⚠️ Disclaimer
 
-This project is at a very early stage. Features, roadmap, and APIs may change rapidly as the project evolves and — since this is a spare‑time effort — progress will depend on the free time I can dedicate to it 🙂. Expect occasional breaking changes and incomplete components.
+This project is at a very early stage. Features, roadmap, and APIs may change rapidly as the project evolves and — since
+this is a spare‑time effort — progress will depend on the free time I can dedicate to it 🙂. Expect occasional breaking
+changes and incomplete components.
 
 ---
 
@@ -73,7 +76,7 @@ The system is designed to be modular, privacy-friendly, and extendable.
 ## 🧩 Architecture Components
 
 | Component           | Description                                                                |
-|---------------------| -------------------------------------------------------------------------- |
+|---------------------|----------------------------------------------------------------------------|
 | `Home Assistant`    | Home automation hub integration with existing registered devices           |
 | `IM Bot`            | User-facing interface for interacting with the butler                      |
 | `Langchain + Redis` | Handles context-aware conversations and memory between agents              |
@@ -123,24 +126,22 @@ make run-debug     # Run main application with logging at the DEBUG level
 ```text
 ├── docker/
 │   └── config/
-│       └── redis.conf
-│   └── volumes/ (<-- RUNTIME)
-│       └── homeassistant/
-│       └── redis/
+│       (Containers' configurations)
+│   └── volumes/
+│       (Containers' volumes)
 ├── src/
 │   └── brain/
-│       └── lurch_brain.py
-│       └── lurch_prompt.py
+│       (Lurch Home main code)
 │   └── integrations/
 │       └── ha
-│           └── ha_mcp_connector.py
-│           └── ha_utils.py
-│           └── ha_ws_connector.py
+│           (Home Assistant)
 │   └── persistence/
-│       └── storage_handler.py
+│       (Storage related code)
+│   └── tools/
+│       (Helpers for MCP Tools)
 │   └── main.py
 ├── tests/
-│       └── test_home_assistant_connector.py
+│       (Test code)
 ├── .env.example
 ├── docker-compose.yml
 ├── LICENSE
@@ -153,12 +154,14 @@ make run-debug     # Run main application with logging at the DEBUG level
 ## 📜 License
 
 This project is licensed under the Apache License 2.0.
-You are free to use, modify, distribute, and integrate this software — even in commercial settings — as long as you respect the terms of the license.
+You are free to use, modify, distribute, and integrate this software — even in commercial settings — as long as you
+respect the terms of the license.
 For more information, see the [LICENSE](LICENSE) file.
 
 ## 🤝 Contributions
 
-Feel free to fork, clone, open issues, or submit PRs. The goal is to build a practical and modular home AI assistant that remains transparent and privacy-conscious.
+Feel free to fork, clone, open issues, or submit PRs. The goal is to build a practical and modular home AI assistant
+that remains transparent and privacy-conscious.
 
 ---
 
