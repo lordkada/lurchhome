@@ -4,11 +4,11 @@ import contextlib
 import logging
 import os
 
-from langchain_core.messages import AIMessage
 from langchain.chat_models.base import init_chat_model
+from langchain_core.messages import AIMessage
 
-from integrations.ha.ha_mcp_connector import HAMCPConnector
 from brain.lurch_brain import Lurch
+from integrations.ha.ha_mcp_connector import HAMCPConnector
 from integrations.ha.ha_ws_connector import HAWSConnector
 from persistence.storage_handler import StorageHandler
 

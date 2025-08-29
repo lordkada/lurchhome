@@ -20,15 +20,12 @@ class Lurch:
     def __init__(self,
                  *,
                  llm_model: BaseChatModel,
-                 ha_mcp_connector: HAMCPConnector,
-                 storage_handler: StorageHandler,
-                 ha_ws_connector: Optional[HAWSConnector]):
+                 ha_mcp_connector: Optional[HAMCPConnector] = None,
+                 storage_handler: Optional[StorageHandler] = None,
+                 ha_ws_connector: Optional[HAWSConnector] = None):
 
         if llm_model is None:
             raise TypeError("model can't be None")
-
-        if ha_mcp_connector is None:
-            raise TypeError("ha_mcp_connector can't be None")
 
         self.llm_model = llm_model
         self.ha_mcp_connector = ha_mcp_connector
@@ -37,24 +34,30 @@ class Lurch:
         self.ha_ws_connector = ha_ws_connector
 
     async def startup(self) -> Self:
-        tools = await build_tools(with_tools=self.ha_mcp_connector, callable_tools=self.ha_mcp_connector)
-
         prompt = ChatPromptTemplate.from_messages([
             SystemMessage(LURCH_PROMPT),
             SystemMessage("{home_status}"),
             ("human", "{input}")
         ])
 
-        self.chain = prompt | create_react_agent(self.llm_model, tools)
+        if self.ha_ws_connector:
+            tools = await build_tools(with_and_callable_tools=self.ha_mcp_connector)
+            self.chain = prompt | create_react_agent(self.llm_model, tools)
+        else:
+            self.chain = prompt | self.llm_model
 
         return self
 
     async def talk_to_lurch(self, message: str = "") -> AsyncIterator[BaseMessage]:
-        live_context = await self.ha_mcp_connector.call_tool(name='GetLiveContext', params={})
-        status = (json.loads(live_context.get('content', {})[0].get('text')))['result']
-        logging.debug('Status %s', status)
+        evaluate_payload = {"input": message}
 
-        async for step in self.chain.astream({"input": message, "home_status": status}, stream_mode="values"):
+        if self.ha_mcp_connector:
+            live_context = await self.ha_mcp_connector.call_tool(name='GetLiveContext', params={})
+            status = (json.loads(live_context.get('content', {})[0].get('text')))['result']
+            logging.debug('Status %s', status)
+            evaluate_payload["home_status"] = status
+
+        async for step in self.chain.astream(input=evaluate_payload, stream_mode="values"):
             logging.debug("chain step: %s", step)
 
             msgs = step.get('agent', {}).get('messages') or []

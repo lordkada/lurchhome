@@ -1,7 +1,7 @@
 import json
 import logging
 from pprint import pformat
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from jsonschema_pydantic import jsonschema_to_pydantic
 from langchain_core.tools import StructuredTool, BaseTool
@@ -52,6 +52,27 @@ def _create_langchain_tool(*, tool_data: Dict[str, Any], callable_tool: Callable
     )
 
 
-async def build_tools(*, with_tools: WithTools, callable_tools: CallableTools) -> List[BaseTool]:
-    tools = await with_tools.get_tools()
-    return [_create_langchain_tool(tool_data=tool, callable_tool=callable_tools) for tool in tools]
+async def build_tools(*,
+                      with_tools: Optional[WithTools] = None,
+                      callable_tools: Optional[CallableTools] = None,
+                      with_and_callable_tools: Optional[BaseTool] = None) -> List[BaseTool]:
+    if with_and_callable_tools and isinstance(with_and_callable_tools, WithTools):
+        _with_tools = with_and_callable_tools
+    elif with_tools:
+        _with_tools = with_tools
+    else:
+        return []
+
+    tools = await _with_tools.get_tools()
+
+    if tools:
+        if with_and_callable_tools and isinstance(with_and_callable_tools, CallableTools):
+            _callable_tools = with_and_callable_tools
+        elif callable_tools:
+            _callable_tools = callable_tools
+        else:
+            return []
+
+        return [_create_langchain_tool(tool_data=tool, callable_tool=_callable_tools) for tool in tools]
+
+    return []
