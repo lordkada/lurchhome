@@ -29,14 +29,27 @@ async def run():
         os.environ[os.getenv("SET_ENVIRONMENT_API_KEY")] = os.getenv(os.getenv("SET_ENVIRONMENT_API_KEY"))
 
     storage_handler = StorageHandler()
-    ha_mcp_connector = HAMCPConnector(ha_base_url=ha_base_url, ha_api_token=ha_api_token)
-    ha_ws_connector = HAWSConnector(ha_base_url=ha_base_url, ha_api_token=ha_api_token, storage_handler=storage_handler)
+
+    ha_mcp_connector = None
+    ha_ws_connector = None
+    t_mcp = None
+    t_ws = None
+
+    model = init_chat_model(model=os.getenv('LURCH_LLM_MODEL'), model_provider=os.getenv('LURCH_LLM_PROVIDER'))
+
+    ha_mcp_connector = None
+    ha_ws_connector = None
 
     async with asyncio.TaskGroup() as tg:
-        t_mcp = tg.create_task(ha_mcp_connector.connect_and_run())
-        t_ws = tg.create_task(ha_ws_connector.listen_ws())
+        if ha_base_url:
+            ha_mcp_connector = HAMCPConnector(ha_base_url=ha_base_url,
+                                              ha_api_token=ha_api_token)
+            ha_ws_connector = HAWSConnector(ha_base_url=ha_base_url,
+                                            ha_api_token=ha_api_token,
+                                            storage_handler=storage_handler)
 
-        model = init_chat_model(model=os.getenv('LURCH_LLM_MODEL'), model_provider=os.getenv('LURCH_LLM_PROVIDER'))
+            t_mcp = tg.create_task(ha_mcp_connector.connect_and_run())
+            t_ws = tg.create_task(ha_ws_connector.listen_ws())
 
         lurch = await (Lurch(llm_model=model,
                              ha_mcp_connector=ha_mcp_connector,
@@ -54,8 +67,11 @@ async def run():
                         if hasattr(ha_ws_connector, "aclose"):
                             await ha_ws_connector.aclose()
 
-                    t_mcp.cancel()
-                    t_ws.cancel()
+                    if t_mcp:
+                        t_mcp.cancel()
+
+                    if t_ws:
+                        t_ws.cancel()
                     break
 
                 if len(user_input) > 0:
@@ -66,8 +82,12 @@ async def run():
                             else:
                                 print(f'| working')
         finally:
-            t_mcp.cancel()
-            t_ws.cancel()
+
+            if t_mcp:
+                t_mcp.cancel()
+
+            if t_ws:
+                t_ws.cancel()
 
 
 def separator(*, length=66):

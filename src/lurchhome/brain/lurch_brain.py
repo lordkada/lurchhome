@@ -3,7 +3,7 @@ import logging
 from typing import Optional, AsyncIterator, Self
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import messages_from_dict, BaseMessage, SystemMessage
+from langchain_core.messages import BaseMessage, SystemMessage, messages_from_dict
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langgraph.prebuilt import create_react_agent
@@ -40,11 +40,11 @@ class Lurch:
             ("human", "{input}")
         ])
 
+        tools = []
         if self.ha_ws_connector:
             tools = await build_tools(with_and_callable_tools=self.ha_mcp_connector)
-            self.chain = prompt | create_react_agent(self.llm_model, tools)
-        else:
-            self.chain = prompt | self.llm_model
+
+        self.chain = prompt | create_react_agent(self.llm_model, tools)
 
         return self
 
