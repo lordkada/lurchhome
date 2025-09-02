@@ -7,10 +7,11 @@ import os
 from langchain.chat_models.base import init_chat_model
 from langchain_core.messages import AIMessage
 
-from brain.lurch_brain import Lurch
-from integrations.ha.ha_mcp_connector import HAMCPConnector
-from integrations.ha.ha_ws_connector import HAWSConnector
-from persistence.storage_handler import StorageHandler
+from lurchhome import __version__
+from lurchhome.brain.lurch_brain import Lurch
+from lurchhome.integrations.ha.ha_mcp_connector import HAMCPConnector
+from lurchhome.integrations.ha.ha_ws_connector import HAWSConnector
+from lurchhome.persistence.storage_handler import StorageHandler
 
 
 async def run():
@@ -69,22 +70,31 @@ async def run():
             t_ws.cancel()
 
 
-if __name__ == "__main__":
-    print(r"""
-      L   U   U RRRR   CCCC  H  H  H  H  OOO   M   M  EEEE
-      L   U   U R   R C      H  H  H  H O   O  MM MM  E   
-      L   U   U RRRR  C      HHHH  HHHH O   O  M M M  EEE 
-      L   U   U R R   C      H  H  H  H O   O  M   M  E   
-      LLL  UUU  R  R   CCCC  H  H  H  H  OOO   M   M  EEEE
+def separator(*, length=66):
+    return "+" + ("-" * length) + "+"
 
-    +------------------------------------------------------------------+
-    | Project : LurchHome                                              |
-    | License : Apache 2.0                                             |
-    | Repo    : https://github.com/lordkada/lurchhome                  |
-    +------------------------------------------------------------------+
-    | Smart Butler for Home Assistant • AI orchestration & automations |
-    +------------------------------------------------------------------+
-    """)
+
+def line(*, text: str, length=66):
+    formatted_string = ' ' * (length - len(text))
+    return "|" + text + formatted_string + "|"
+
+
+if __name__ == "__main__":
+    print(f"""
+        L   U   U RRRR   CCCC  H  H  H  H  OOO   M   M  EEEE
+        L   U   U R   R C      H  H  H  H O   O  MM MM  E   
+        L   U   U RRRR  C      HHHH  HHHH O   O  M M M  EEE 
+        L   U   U R R   C      H  H  H  H O   O  M   M  E   
+        LLL  UUU  R  R   CCCC  H  H  H  H  OOO   M   M  EEEE
+      """)
+    print(separator())
+    print(line(text=' Project : LurchHome'))
+    print(line(text=' Version : ' + f'{__version__}'))
+    print(line(text=' License : Apache 2.0 '))
+    print(line(text=' Repo    : https://github.com/lordkada/lurchhome'))
+    print(separator())
+    print(line(text=' Smart Butler for Home Assistant • AI orchestration & automations'))
+    print(separator())
 
     parser = argparse.ArgumentParser(description="Set the logging level via command line")
     parser.add_argument('--log', default='WARNING',

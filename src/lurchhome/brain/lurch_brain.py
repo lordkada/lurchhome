@@ -8,11 +8,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langgraph.prebuilt import create_react_agent
 
-from brain.lurch_prompt import LURCH_PROMPT
-from integrations.ha.ha_mcp_connector import HAMCPConnector
-from integrations.ha.ha_ws_connector import HAWSConnector
-from persistence.storage_handler import StorageHandler
-from tools.tools_utils import build_tools
+from lurchhome.brain.lurch_prompt import LURCH_PROMPT
+from lurchhome.integrations.ha.ha_mcp_connector import HAMCPConnector
+from lurchhome.integrations.ha.ha_ws_connector import HAWSConnector
+from lurchhome.persistence.storage_handler import StorageHandler
+from lurchhome.tools.tools_utils import build_tools
 
 
 class Lurch:

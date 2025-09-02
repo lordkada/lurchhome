@@ -6,8 +6,8 @@ from typing import Dict, Any, List, Optional
 from jsonschema_pydantic import jsonschema_to_pydantic
 from langchain_core.tools import StructuredTool, BaseTool
 
-from tools.lurch_callable_tools import CallableTools
-from tools.lurch_with_tools import WithTools
+from lurchhome.tools.lurch_callable_tools import CallableTools
+from lurchhome.tools.lurch_with_tools import WithTools
 
 
 def _create_langchain_tool(*, tool_data: Dict[str, Any], callable_tool: CallableTools) -> BaseTool:

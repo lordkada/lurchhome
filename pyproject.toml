@@ -1,0 +1,45 @@
+[project]
+name = "lurchhome"
+dynamic = ["version"]
+description = "Lurch home, where the butler is the AI"
+authors = [
+    { name = "Carlo Alberto Degli Atti", email = "lordkada@gmail.com" },
+]
+dependencies = [
+    "httpx",
+    "langgraph",
+    "jsonschema-pydantic",
+    "redis",
+    "httpx-ws",
+    "langchain",
+    "langchain[ollama,openai]",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true
+
+[[tool.pdm.source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.pdm.scripts]
+_.env_file = ".env"
+
+[tool.pdm.version]
+source = "scm"
+fallback_version = "0.0.0"

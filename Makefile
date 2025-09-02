@@ -57,19 +57,13 @@ restore:
 	@echo "$(GREEN)Restore done!$(NC)"
 
 install:
-	@if command -v pipenv > /dev/null; then pipenv install; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi
-
-install-dev:
-	@if command -v pipenv > /dev/null; then pipenv install --dev; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi
-
-shell:
-	pipenv shell
+	@if command -v pdm > /dev/null; then pdm install; else echo "$(RED)Pdm not installed. Please install it following instructions here: https://pdm-project.org$(NC)"; fi
 
 test:
-	@if command -v pipenv > /dev/null; then pipenv run pytest tests/; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi
+	@if command -v pdm > /dev/null; then pdm run pytest tests; else echo "$(RED)Pdm not installed. Please install it following instructions here: https://pdm-project.org$(NC)"; fi
 
 run:
-	@if command -v pipenv > /dev/null; then pipenv run python src/main.py; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi
+	@if command -v pdm > /dev/null; then pdm run python src/lurchhome/main.py; else echo "$(RED)Pdm not installed. Please install it following instructions here: https://pdm-project.org$(NC)"; fi
 
 run-debug:
-	@if command -v pipenv > /dev/null; then pipenv run python src/main.py --log DEBUG; else echo "$(RED)pipenv not installed. Please install it using: pip install pipenv$(NC)"; fi
+	@if command -v pdm > /dev/null; then pdm run python src/lurchhome/main.py --log DEBUG; else echo "$(RED)Pdm not installed. Please install it following instructions here: https://pdm-project.org$(NC)"; fi
