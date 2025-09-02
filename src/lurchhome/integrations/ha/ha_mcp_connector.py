@@ -1,8 +1,12 @@
-import asyncio, logging, json, re, httpx
+import asyncio
+import httpx
+import json
+import logging
+import re
 from typing import Dict, Any, List
 
-from tools.lurch_callable_tools import CallableTools
-from tools.lurch_with_tools import WithTools
+from lurchhome.tools.lurch_callable_tools import CallableTools
+from lurchhome.tools.lurch_with_tools import WithTools
 
 """
 Implementation of the MCP Protocol, version 2024-11-05

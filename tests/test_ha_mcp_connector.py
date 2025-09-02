@@ -1,12 +1,13 @@
-import pytest
 import asyncio
 import json
-import httpx
-from unittest.mock import AsyncMock, Mock, patch
 import os
+from unittest.mock import AsyncMock, Mock, patch
 
-import integrations.ha.ha_mcp_connector as ha_mcp_connector
-from integrations.ha.ha_mcp_connector import HAMCPConnector
+import httpx
+import pytest
+
+import lurchhome.integrations.ha.ha_mcp_connector as ha_mcp_connector
+from lurchhome.integrations.ha.ha_mcp_connector import HAMCPConnector
 
 
 class TestUtilityFunctions:

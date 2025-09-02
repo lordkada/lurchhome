@@ -114,8 +114,6 @@ make restore BACKUP_FILE=path/to/backup.tar.gz  # Restore from a backup
 
 ```bash
 make install       # Install Python dependencies with pipenv
-make install-dev   # Install dev dependencies
-make shell         # Open a pipenv shell
 make test          # Run tests with pytest
 make run           # Run main application
 make run-debug     # Run main application with logging at the DEBUG level
@@ -129,17 +127,17 @@ make run-debug     # Run main application with logging at the DEBUG level
 │       (Containers' configurations)
 │   └── volumes/
 │       (Containers' volumes)
-├── src/
-│   └── brain/
-│       (Lurch Home main code)
-│   └── integrations/
-│       └── ha
-│           (Home Assistant)
-│   └── persistence/
-│       (Storage related code)
-│   └── tools/
-│       (Helpers for MCP Tools)
-│   └── main.py
+├── src/lurchhome
+│       └── brain/
+│          (Lurch Home main code)
+│       └── integrations/
+│           └── ha
+│               (Home Assistant)
+│       └── persistence/
+│           (Storage related code)
+│       └── tools/
+│           (Helpers for MCP Tools)
+│       └── main.py
 ├── tests/
 │       (Test code)
 ├── .env.example

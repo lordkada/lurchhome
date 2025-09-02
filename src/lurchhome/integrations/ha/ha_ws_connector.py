@@ -5,7 +5,7 @@ from typing import Optional
 
 from httpx_ws import aconnect_ws
 
-from persistence.storage_handler import StorageHandler
+from lurchhome.persistence.storage_handler import StorageHandler
 
 EVENT_TYPES = ['state_changed']
 
