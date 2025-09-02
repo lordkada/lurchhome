@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 import redis.asyncio as aioredis
 from redis import RedisError
@@ -13,7 +13,12 @@ EVENTS_MAXLEN = 10
 
 class StorageHandler:
 
-    def __init__(self, *, host='localhost', port=6379):
+    def __init__(self, *, host='localhost', port: Optional[str]):
+        if port:
+            port = int(port)
+        else:
+            port = 6379
+
         self.redis = aioredis.Redis(
             host=host,
             port=port,

@@ -28,7 +28,11 @@ async def run():
     if os.getenv("SET_ENVIRONMENT_API_KEY") and os.getenv(os.getenv("SET_ENVIRONMENT_API_KEY")):
         os.environ[os.getenv("SET_ENVIRONMENT_API_KEY")] = os.getenv(os.getenv("SET_ENVIRONMENT_API_KEY"))
 
-    storage_handler = StorageHandler()
+    redis_url = os.getenv('REDIS_URL')
+    storage_handler = None
+    if redis_url:
+        port = os.getenv('REDIS_PORT', None)
+        storage_handler = StorageHandler(host=redis_url, port=port)
 
     ha_mcp_connector = None
     ha_ws_connector = None
@@ -36,9 +40,6 @@ async def run():
     t_ws = None
 
     model = init_chat_model(model=os.getenv('LURCH_LLM_MODEL'), model_provider=os.getenv('LURCH_LLM_PROVIDER'))
-
-    ha_mcp_connector = None
-    ha_ws_connector = None
 
     async with asyncio.TaskGroup() as tg:
         if ha_base_url:
