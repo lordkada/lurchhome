@@ -3,7 +3,7 @@ import logging
 from typing import Optional, AsyncIterator, Self
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage, SystemMessage, messages_from_dict
+from langchain_core.messages import BaseMessage, SystemMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langgraph.prebuilt import create_react_agent
@@ -45,8 +45,30 @@ class Lurch:
             tools = await build_tools(with_and_callable_tools=self.ha_mcp_connector)
 
         self.chain = prompt | create_react_agent(self.llm_model, tools)
-
         return self
+
+    async def __save_analytics(self, m: AIMessage):
+        if self.storage_handler and hasattr(m, 'response_metadata'):
+            response_metadata = m.response_metadata
+            try:
+                input_tokens, output_tokens = 0, 0
+                if 'prompt_eval_count' in response_metadata and 'eval_count' in response_metadata:
+                    input_tokens = response_metadata.get('prompt_eval_count')
+                    output_tokens = response_metadata.get('eval_count')
+                elif 'token_usage' in response_metadata:
+                    token_usage = response_metadata.get('token_usage')
+                    input_tokens = token_usage.get('prompt_tokens')
+                    output_tokens = token_usage.get('completion_tokens')
+
+                if input_tokens + output_tokens > 0:
+                    total_input_tokens, total_output_tokens = await self.storage_handler.update_llm_tokens(
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens)
+                    logging.info('Current step LLM usage stats: %i->%i. Total LLM stats: %i->%i',
+                                 input_tokens, output_tokens,
+                                 total_input_tokens, total_output_tokens)
+            except KeyError:
+                pass
 
     async def talk_to_lurch(self, message: str = "") -> AsyncIterator[BaseMessage]:
         evaluate_payload = {"input": message}
@@ -59,42 +81,11 @@ class Lurch:
 
         async for step in self.chain.astream(input=evaluate_payload, stream_mode="values"):
             logging.debug("chain step: %s", step)
+            if getattr(step, 'get', None):
+                msgs = step.get('agent', {}).get('messages') or []
+            else:
+                msgs = [step]
 
-            msgs = step.get('agent', {}).get('messages') or []
-            if not msgs:
-                continue
-
-            norm_msgs = msgs if isinstance(msgs[0], BaseMessage) else messages_from_dict(msgs)
-
-            for m in norm_msgs:
-                if hasattr(m, 'content') and m.content:
-                    logging.debug(f"Content: {m.content[:100]}...")
-                if hasattr(m, 'tool_calls') and m.tool_calls:
-                    logging.debug(f"Tool call: {m.tool_calls[:100]}...")
-                if hasattr(m, 'additional_kwargs') and m.additional_kwargs:
-                    logging.debug(f"Reasoning: {m.additional_kwargs}...")
-
-                logging.debug("talk_to_lurch: message type %s", type(m))
-
-                if self.storage_handler and hasattr(m, 'response_metadata'):
-                    response_metadata = m.response_metadata
-                    try:
-                        input_tokens, output_tokens = 0, 0
-                        if 'prompt_eval_count' in response_metadata and 'eval_count' in response_metadata:
-                            input_tokens = response_metadata.get('prompt_eval_count')
-                            output_tokens = response_metadata.get('eval_count')
-                        elif 'token_usage' in response_metadata:
-                            token_usage = response_metadata.get('token_usage')
-                            input_tokens = token_usage.get('prompt_tokens')
-                            output_tokens = token_usage.get('completion_tokens')
-
-                        if input_tokens + output_tokens > 0:
-                            total_input_tokens, total_output_tokens = await self.storage_handler.update_llm_tokens(
-                                input_tokens=input_tokens,
-                                output_tokens=output_tokens)
-                            logging.info('Current step LLM usage stats: %i->%i. Total LLM stats: %i->%i',
-                                         input_tokens, output_tokens,
-                                         total_input_tokens, total_output_tokens)
-                    except KeyError:
-                        pass
+            for m in msgs:
+                await self.__save_analytics(m)
                 yield m
