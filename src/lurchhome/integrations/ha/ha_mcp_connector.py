@@ -115,7 +115,7 @@ class HAMCPConnector(WithTools, CallableTools):
             if id in self._pending_requests:
                 del self._pending_requests[id]
 
-    async def __command_processor(self, forever=True):
+    async def __command_processor(self):
         await self._messages_url_ready.wait()
 
         while True:
@@ -129,9 +129,6 @@ class HAMCPConnector(WithTools, CallableTools):
                     )
 
                 self._command_queue.task_done()
-
-                if not forever:
-                    break
 
             except Exception as e:
                 logging.error(f"Command processor error: {e}")
